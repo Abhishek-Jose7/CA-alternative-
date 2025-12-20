@@ -1,0 +1,36 @@
+name: vyapar_guard
+description: The Pocket CA for Indian MSMEs
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking & utilities
+  http: 1.1.0
+  image_picker: 1.0.4
+  file_picker: 6.1.1
+  path_provider: 2.1.1
+  google_fonts: 6.1.0
+
+  # Firebase (PINNED for Dart 3.10 compatibility)
+  firebase_core: 2.24.2
+  firebase_auth: 4.15.3
+  cloud_firestore: 4.14.0
+
+dependency_overrides:
+  # Critical: prevents PromiseJsImpl / handleThenable errors
+  firebase_auth_web: 5.8.4
+  firebase_core_web: 2.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 2.0.0
+
+flutter:
+  uses-material-design: true
