@@ -17,29 +17,36 @@ class GeminiService:
 
     async def decode_notice(self, image_path: str) -> dict:
         """
-        Uses Gemini 1.5 Pro to understand a legal GST Notice.
+        Uses Gemini 1.5 Pro to understand a legal GST Notice with strict JSON output.
         """
         prompt = """
         You are a GST compliance expert for Indian MSMEs.
         Analyze this image of a government notice.
         
-        Extract the following strictly in JSON format:
-        1. "noticeType": What kind of notice is this? (e.g., "Address Verification", "Demand Notice", "Show Cause")
-        2. "summary": A simple 1-sentence explanation in plain English.
-        3. "summaryHindi": A simple 1-sentence explanation in Hindi.
-        4. "deadline": Extract the response deadline date (YYYY-MM-DD format if possible, else text).
-        5. "penalty": Does it mention a penalty? (Yes/No and amount if applicable).
-        6. "actionRequired": What should the user do next?
-        7. "riskLevel": Assess risk (Low/Medium/High).
+        Return a STRICT JSON object (no markdown, no extra text) with this schema:
+        {
+            "status": "success",
+            "type": "notice",
+            "confidence": <float between 0.0 and 1.0>,
+            "data": {
+                "noticeType": "<string: e.g. Address Verification, Show Cause>",
+                "summary": "<string: Simple 1-sentence explanation in plain English>",
+                "summaryHindi": "<string: Simple 1-sentence explanation in Hindi>",
+                "deadline": "<string: DD MMM YYYY or null>",
+                "penalty": "<string: e.g. 'No penalty' or 'Rs 5000'>",
+                "actionRequired": "<string: clear next step>",
+                "riskLevel": "<string: Safe, Needs Review, or Action Required>"
+            }
+        }
+        
+        Risk Logic:
+        - "Safe": Information only, no negative consequence.
+        - "Needs Review": Minor discrepancy or info needed.
+        - "Action Required": Deadlines, penalties, or show-cause.
         """
         
-        # Load image (assuming local path for MVP, or bytes)
         img = Image.open(image_path)
-        
         response = self.notice_model.generate_content([prompt, img])
-        
-        # In a real app, we would add robust JSON parsing here
-        # For MVP, we assume the model follows instructions well or use response.text
         return self._clean_json(response.text)
 
     async def parse_invoice(self, image_path: str) -> dict:
@@ -47,16 +54,25 @@ class GeminiService:
         Uses Gemini 1.5 Flash to extract structured data from an Invoice.
         """
         prompt = """
-        Extract data from this invoice image into strict JSON format with these keys:
-        - "vendorName": Name of the seller
-        - "gstin": Seller's GSTIN
-        - "invoiceNumber": Invoice No.
-        - "date": Invoice Date
-        - "totalAmount": Grand Total
-        - "lineItems": List of objects with {"description", "hsn", "amount"}
-        - "tax": Object with {"cgst", "sgst", "igst"} values
-        
-        If a field is missing, use null.
+        Extract data from this invoice image into strict JSON format:
+        {
+            "status": "success",
+            "type": "invoice",
+            "confidence": <float between 0.0 and 1.0>,
+            "data": {
+                "vendorName": "<string>",
+                "gstin": "<string>",
+                "invoiceNumber": "<string>",
+                "date": "<string>",
+                "totalAmount": "<string>",
+                "tax": {
+                    "cgst": "<string>",
+                    "sgst": "<string>",
+                    "igst": "<string>"
+                }
+            }
+        }
+        If fields are speculative or unclear, lower the confidence score.
         """
         
         img = Image.open(image_path)

@@ -1,86 +1,137 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import '../services/api_service.dart';
+import 'scan_notice_screen.dart';
+import 'scan_invoice_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final ApiService _api = ApiService();
-  bool _isLoading = false;
-  String? _result;
-
-  Future<void> _scanNotice() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      setState(() => _isLoading = true);
-      try {
-        final res = await _api.decodeNotice(File(pickedFile.path));
-        setState(() => _result = "Notice Decoded:\n${res['data']['summary']}");
-      } catch (e) {
-        setState(() => _result = "Error: $e");
-      } finally {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _scanInvoice() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      setState(() => _isLoading = true);
-      try {
-        final res = await _api.parseInvoice(File(pickedFile.path));
-        setState(() => _result = "Invoice Parsed:\nVendor: ${res['data']['vendorName']}\nTotal: ${res['data']['totalAmount']}");
-      } catch (e) {
-        setState(() => _result = "Error: $e");
-      } finally {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("VyaparGuard (Pocket CA)")),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_result != null)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Card(
-                          color: Colors.blue.shade50,
-                          child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Text(_result!,
-                                  style: const TextStyle(fontSize: 16)))),
-                    ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                      onPressed: _scanNotice,
-                      icon: const Icon(Icons.warning_amber),
-                      label: const Text("Scan GST Notice")),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                      onPressed: _scanInvoice,
-                      icon: const Icon(Icons.receipt),
-                      label: const Text("Scan Invoice")),
-                ],
-              ),
+      appBar: AppBar(
+        title: const Text("VyaparGuard"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              "GST made simple for your shop",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            _PrimaryButton(
+              label: "Scan GST Notice",
+              icon: Icons.description,
+              color: Colors.blue,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScanNoticeScreen()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            _PrimaryButton(
+              label: "Scan Invoice",
+              icon: Icons.receipt_long,
+              color: Colors.green,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScanInvoiceScreen()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 32),
+
+            const Text(
+              "Recent Activity",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 12),
+
+            const _ActivityTile(
+              title: "Address verification notice",
+              subtitle: "Status: Safe",
+              icon: Icons.check_circle,
+              color: Colors.green,
+            ),
+            const _ActivityTile(
+              title: "Invoice scanned",
+              subtitle: "₹8,450",
+              icon: Icons.receipt,
+              color: Colors.blue,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PrimaryButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        minimumSize: const Size.fromHeight(56),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: Icon(icon, color: Colors.white),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 16, color: Colors.white),
+      ),
+      onPressed: onTap,
+    );
+  }
+}
+
+class _ActivityTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+
+  const _ActivityTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title),
+        subtitle: Text(subtitle),
       ),
     );
   }

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
-// import 'package:firebase_core/firebase_core.dart'; // Uncomment when firebase is set up
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp(); // Uncomment when firebase is set up
+void main() {
   runApp(const VyaparGuardApp());
 }
 
@@ -16,10 +12,12 @@ class VyaparGuardApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VyaparGuard',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
-        textTheme: GoogleFonts.interTextTheme(),
+        colorSchemeSeed: Colors.blue,
+        fontFamily: 'Roboto',
+        scaffoldBackgroundColor: Colors.grey[50], // As requested
       ),
       home: const HomeScreen(),
     );
