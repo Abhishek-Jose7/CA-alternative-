@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'screens/main_wrapper.dart';
 
 void main() {
   runApp(const VyaparGuardApp());
@@ -19,7 +20,7 @@ class VyaparGuardApp extends StatelessWidget {
         fontFamily: 'Roboto',
         scaffoldBackgroundColor: Colors.grey[50], // As requested
       ),
-      home: const HomeScreen(),
+      home: const MainWrapper(),
     );
   }
 }
