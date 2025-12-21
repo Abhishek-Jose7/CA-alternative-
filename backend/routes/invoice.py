@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services.gemini_service import gemini_service
+from services.ai_service import ai_service as gemini_service
 import shutil
 import os
 import uuid
@@ -28,4 +28,6 @@ async def parse_invoice(file: UploadFile = File(...)):
             "data": result
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services.gemini_service import gemini_service
+from services.ai_service import ai_service as gemini_service
 import shutil
 import os
 import uuid
