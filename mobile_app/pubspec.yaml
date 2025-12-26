@@ -26,6 +26,7 @@ dependencies:
   speech_to_text: ^7.3.0
   flutter_tts: ^4.2.3
   url_launcher: ^6.3.2
+  table_calendar: ^3.2.0
 
 dependency_overrides:
   # Critical: prevents PromiseJsImpl / handleThenable errors

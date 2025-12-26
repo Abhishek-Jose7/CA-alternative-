@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../providers/language_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -14,7 +16,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ApiService _api = ApiService();
   final List<Map<String, String>> _messages = [
-    {"role": "bot", "text": "Hello! I am your AI CA Assistant. Ask me anything about HSN, Tax, or Notices."},
+    {"role": "bot", "text": "Namaste! I am your AI CA Assistant. Ask me anything."},
   ];
   
   // Voice Features
@@ -32,8 +34,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _initSpeech() async {
-    _available = await _speech.initialize();
-    setState(() {});
+    try {
+      _available = await _speech.initialize();
+    } catch (e) {
+      debugPrint("Speech init error: $e");
+    }
+    if (mounted) setState(() {});
   }
 
   void _listen() async {
@@ -43,9 +49,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _speech.listen(onResult: (val) {
         setState(() {
           _controller.text = val.recognizedWords;
-          if (val.hasConfidenceRating && val.confidence > 0) {
-            // Optional: Auto-send if confidence high
-          }
         });
       });
     } else {
@@ -67,6 +70,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_controller.text.isEmpty) return;
     
     final query = _controller.text;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
     setState(() {
       _messages.add({"role": "user", "text": query});
       _controller.clear();
@@ -80,8 +85,12 @@ class _ChatScreenState extends State<ChatScreen> {
         final answer = "HSN ${result['data']['hsn_code']} - GST ${result['data']['gst_rate']}\n${result['data']['reason']}";
         _addBotResponse(answer, shouldSpeak: isVoice);
       } else {
-        // General Chat
-        final result = await _api.chatWithAI(query);
+        // General Chat with Language Context
+        final result = await _api.chatWithAI(
+          query, 
+          language: lang.chatLocale.languageCode,
+          userId: lang.userId
+        );
         final reply = result['data']['reply'];
         _addBotResponse(reply, shouldSpeak: isVoice);
       }
@@ -101,10 +110,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
+    // Dynamic Hints based on language (simplified map for hints)
+    final hints = {
+      'en': ['Can I claim ITC on fridge?', 'Is this notice serious?', 'What is the late fee?'],
+      'hi': ['क्या मैं फ्रिज पर ITC ले सकता हूँ?', 'क्या यह नोटिस गंभीर है?', 'लेट फीस क्या है?'],
+      'mr': ['मी फ्रिजवर ITC घेऊ शकतो का?', 'ही नोटीस गंभीर आहे का?', 'लेट फी काय आहे?'],
+    };
+    final currentHints = hints[lang.locale.languageCode] ?? hints['en']!;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: const Text("AI CA Assistant"),
+        title: Text(lang.t('ask_ai')),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -139,9 +158,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "AI CA Assistant",
-                        style: TextStyle(
+                      Text(
+                        lang.t('app_title'), // Or some CA title
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -149,7 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _isListening ? "Listening..." : "GST guidance based on official rules",
+                        _isListening ? "Listening..." : lang.t('ready_help'),
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
@@ -172,10 +191,10 @@ class _ChatScreenState extends State<ChatScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _ContextChip("ITC", onTap: () => _controller.text = "Tell me about ITC"),
-                _ContextChip("GST Notices", onTap: () => _controller.text = "How to handle GST Notice?"),
-                _ContextChip("Late Fees", onTap: () => _controller.text = "What are late fees?"),
-                _ContextChip("Filing", onTap: () => _controller.text = "GST Filing deadlines"),
+                _ContextChip("ITC", onTap: () => _controller.text = "ITC"),
+                _ContextChip("Notices", onTap: () => _controller.text = "Notice"),
+                _ContextChip("Late Fees", onTap: () => _controller.text = "Late Fees"),
+                _ContextChip("Filing", onTap: () => _controller.text = "Filing"),
               ],
             ),
           ),
@@ -226,14 +245,11 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_messages.length < 3)
             SizedBox(
               height: 48,
-              child: ListView(
+              child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  _SuggestionChip("Can I claim ITC on fridge?", onTap: _setInput),
-                  _SuggestionChip("Is this notice serious?", onTap: _setInput),
-                  _SuggestionChip("What is the late fee?", onTap: _setInput),
-                ],
+                itemCount: currentHints.length,
+                itemBuilder: (ctx, i) => _SuggestionChip(currentHints[i], onTap: _setInput),
               ),
             ),
           
@@ -241,7 +257,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
           /// INPUT BAR
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16), // Bottom padding for safe area logic usually
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -258,7 +274,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      hintText: "Ask a GST question...",
+                      hintText: "Ask...",
                       filled: true,
                       fillColor: const Color(0xFFF3F4F6),
                       border: OutlineInputBorder(

@@ -61,11 +61,11 @@ class ApiService {
      throw Exception('HSN Search Failed');
   }
 
-  Future<Map<String, dynamic>> chatWithAI(String message) async {
+  Future<Map<String, dynamic>> chatWithAI(String message, {String language = 'en', String? userId}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/chat'),
       headers: {"Content-Type": "application/json"},
-      body: json.encode({"message": message}),
+      body: json.encode({"message": message, "language": language, "user_id": userId}),
     );
      if (response.statusCode == 200) return json.decode(response.body);
      throw Exception('Chat Failed');

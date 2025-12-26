@@ -7,8 +7,12 @@ router = APIRouter()
 class SearchQuery(BaseModel):
     query: str
 
+from typing import Optional
+
 class ChatQuery(BaseModel):
     message: str
+    language: str = "en"
+    user_id: Optional[str] = None
 
 @router.post("/hsn")
 async def search_hsn(body: SearchQuery):
@@ -21,7 +25,7 @@ async def search_hsn(body: SearchQuery):
 @router.post("/chat")
 async def chat_expert(body: ChatQuery):
     try:
-        result = await gemini_service.chat_with_ca(body.message)
+        result = await gemini_service.chat_with_ca(body.message, body.language, body.user_id)
         return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

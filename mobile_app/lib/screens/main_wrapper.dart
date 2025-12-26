@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import 'home_screen.dart';
 import 'documents_screen.dart';
 import 'chat_screen.dart';
-import 'deadlines_screen.dart';
+import 'tithi_calendar_screen.dart';
 import 'profile_screen.dart';
 
 class MainWrapper extends StatefulWidget {
@@ -13,13 +15,64 @@ class MainWrapper extends StatefulWidget {
 }
 
 class _MainWrapperState extends State<MainWrapper> {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
+      if (!lang.hasAskedLanguage) {
+        _showLanguageDialog(lang);
+      }
+    });
+  }
+
+  void _showLanguageDialog(LanguageProvider lang) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Select your Language / भाषा चुनें"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text("English"),
+              onTap: () {
+                lang.setLanguage('en');
+                lang.markAsked();
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: const Text("हिंदी (Hindi)"),
+              onTap: () {
+                lang.setLanguage('hi');
+                lang.markAsked();
+                Navigator.pop(ctx);
+              },
+            ),
+             ListTile(
+              title: const Text("मराठी (Marathi)"),
+              onTap: () {
+                lang.setLanguage('mr');
+                lang.markAsked();
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
     const HomeScreen(),
     const DocumentsScreen(),
     const ChatScreen(),
-    const DeadlinesScreen(),
+    const TithiCalendarScreen(),
     const ProfileScreen(),
   ];
 

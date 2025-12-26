@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../providers/language_provider.dart';
 import 'notice_result_screen.dart';
 import 'invoice_result_screen.dart';
+import 'supplier_check_screen.dart';
+import 'add_expense_screen.dart';
+import 'tithi_calendar_screen.dart';
 import '../theme/app_theme.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,10 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (pickedFile == null) return;
 
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
     setState(() {
       _isLoading = true;
-      _loadingText = isNotice ? "Reading document..." : "Scanning invoice...";
-      _loadingSubtext = isNotice ? "Understanding GST details..." : "Extracting tables...";
+      _loadingText = isNotice ? "Reading..." : "Scanning...";
+      _loadingSubtext = "Processing...";
     });
 
     try {
@@ -67,6 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -86,223 +97,319 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB), // Premium Background
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // A. Branded Hero Header
-              Container(
-                margin: const EdgeInsets.only(bottom: 24),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+      backgroundColor: const Color(0xFFF8F9FF),
+      body: CustomScrollView(
+        slivers: [
+          // 1. Premium Sliver App Bar with Health Score
+          SliverAppBar(
+            expandedHeight: 300.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppTheme.primaryBlue,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E40AF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))
-                  ]
                 ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                             Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(lang.t('app_title'), 
+                                  style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                                const SizedBox(height: 4),
+                                Text("${lang.t('hello')} Ravi 🙏", 
+                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            // Language Dropdown
+                            DropdownButton<String>(
+                              value: lang.locale.languageCode,
+                              dropdownColor: const Color(0xFF0F172A),
+                              icon: const Icon(Icons.language, color: Colors.white),
+                              underline: Container(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  lang.setLanguage(newValue);
+                                }
+                              },
+                              items: const [
+                                DropdownMenuItem(value: 'en', child: Text("Eng", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(value: 'hi', child: Text("हिंदी", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(value: 'mr', child: Text("मराठी", style: TextStyle(color: Colors.white))),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        // Health Score Card
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                height: 80,
+                                width: 80,
+                                child: Stack(
+                                  children: [
+                                    const Center(
+                                      child: SizedBox(
+                                        height: 80, width: 80,
+                                        child: CircularProgressIndicator(
+                                          value: 0.85,
+                                          strokeWidth: 8,
+                                          backgroundColor: Colors.white24,
+                                          valueColor: AlwaysStoppedAnimation(Colors.greenAccent),
+                                        ),
+                                      ),
+                                    ),
+                                    Center(
+                                      child: Text("85%", 
+                                        style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(lang.t('health_score'), 
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const SizedBox(height: 4),
+                                    Text(lang.t('health_good'), 
+                                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Main Content
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8F9FF),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(lang.t('quick_actions'), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    
+                    // Grid Actions
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('scan_invoice'),
+                            icon: Icons.document_scanner_outlined,
+                            color: Colors.blue,
+                            onTap: () => _handleScan(false),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('check_notice'),
+                            icon: Icons.warning_amber_rounded,
+                            color: Colors.orange,
+                            onTap: () => _handleScan(true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('supplier_check'),
+                            icon: Icons.shield_outlined,
+                            color: Colors.teal,
+                            onTap: () => _navigateWithMotion(const SupplierCheckScreen()),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('expense_manager'),
+                            icon: Icons.account_balance_wallet_outlined,
+                            color: Colors.indigo,
+                            onTap: () => _navigateWithMotion(const AddExpenseScreen()),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('ask_ai'),
+                            icon: Icons.mic_none_outlined,
+                            color: Colors.purple,
+                            onTap: () => _navigateWithMotion(const ChatScreen()),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _ActionTile(
+                            title: lang.t('deadlines'),
+                            icon: Icons.calendar_today_outlined,
+                            color: Colors.redAccent,
+                            onTap: () => _navigateWithMotion(const TithiCalendarScreen()),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Recent Activity Stream (Simplified)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                         const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Hello, Ravi 👋", 
-                              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 6),
-                            Text("Your Pocket CA is ready to help", 
-                              style: TextStyle(color: Colors.white70, fontSize: 15)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.notifications, color: Colors.white, size: 22),
-                        )
+                        Text(lang.t('recent_activity'), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(lang.t('view_all'), style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
                       ],
-                    )
-                  ],
-                ),
-              ),
-
-              // B. Glass-Style Status Cards
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
+                    ),
+                    const SizedBox(height: 16),
+                    const _ActivityItem(
+                      title: "Rent Invoice #902",
+                      time: "2 hours ago",
+                      amount: "₹12,000",
+                      isCredit: false,
+                    ),
+                    const _ActivityItem(
+                      title: "ITC Claimed",
+                      time: "Yesterday",
+                      amount: "+ ₹4,500",
+                      isCredit: true,
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _StatusItem(title: "Notices", count: "2", status: "Safe", color: Colors.green, icon: Icons.verified_user),
-                    Container(width: 1, height: 40, color: Colors.grey[200]),
-                    _StatusItem(title: "Pending", count: "1", status: "Action", color: Colors.orange, icon: Icons.warning_amber),
-                  ],
-                ),
               ),
-              
-              const SizedBox(height: 32),
-              
-              Text("Quick Actions", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-
-              // C. Premium Action Cards
-              _PremiumActionCard(
-                title: "Scan GST Notice",
-                subtitle: "AI Risk Check • Instant Decoding",
-                icon: Icons.document_scanner,
-                color1: const Color(0xFF2563EB),
-                color2: const Color(0xFF3B82F6),
-                onTap: () => _handleScan(true),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              _PremiumActionCard(
-                title: "Scan Invoice",
-                subtitle: "Digitize & Extract Data",
-                icon: Icons.receipt_long,
-                color1: const Color(0xFF10B981),
-                color2: const Color(0xFF34D399),
-                onTap: () => _handleScan(false),
-              ),
-
-              const SizedBox(height: 32),
-              
-              // Recent Activity Stream
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Recent Activity", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                   Text("View All", style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              const _ActivityItem(
-                title: "Rent Invoice Scanned",
-                time: "2 hours ago",
-                icon: Icons.receipt,
-                color: Colors.blue,
-              ),
-              const _ActivityItem(
-                title: "Address Notice - Safe",
-                time: "Yesterday",
-                icon: Icons.verified,
-                color: Colors.green,
-              ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionTile({required this.title, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 110,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), overflow: TextOverflow.ellipsis),
+          ],
         ),
       ),
     );
   }
 }
 
-class _StatusItem extends StatelessWidget {
+class _DeadlineCard extends StatelessWidget {
+  final String date;
+  final String month;
   final String title;
-  final String count;
   final String status;
-  final Color color;
-  final IconData icon;
+  final bool isUrgent;
 
-  const _StatusItem({required this.title, required this.count, required this.status, required this.color, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-        Text(title, style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-}
-
-class _PremiumActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color1;
-  final Color color2;
-  final VoidCallback onTap;
-
-  const _PremiumActionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color1,
-    required this.color2,
-    required this.onTap,
+  const _DeadlineCard({
+    required this.date, required this.month, required this.title, required this.status, this.isUrgent = false
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100, // Taller buttons
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(colors: [color1, color2]),
-        boxShadow: [
-          BoxShadow(color: color1.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
+        color: isUrgent ? const Color(0xFFFFF4F2) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: isUrgent ? Border.all(color: Colors.red.shade100) : Border.all(color: Colors.transparent),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                  child: Icon(icon, color: Colors.white, size: 30),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
-                )
-              ],
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(date, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isUrgent ? Colors.red : Colors.black)),
+              const SizedBox(width: 4),
+              Text(month, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+            ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(status, style: TextStyle(fontSize: 12, color: isUrgent ? Colors.red : Colors.green)),
+        ],
       ),
     );
   }
@@ -311,10 +418,12 @@ class _PremiumActionCard extends StatelessWidget {
 class _ActivityItem extends StatelessWidget {
   final String title;
   final String time;
-  final IconData icon;
-  final Color color;
+  final String amount;
+  final bool isCredit;
 
-  const _ActivityItem({required this.title, required this.time, required this.icon, required this.color});
+  const _ActivityItem({
+    required this.title, required this.time, required this.amount, required this.isCredit
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -324,23 +433,36 @@ class _ActivityItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.receipt_long, size: 20, color: Colors.black54),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  Text(time, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                Text(time, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-              ],
+          Text(
+            amount,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isCredit ? Colors.green : Colors.black,
+              fontSize: 16,
             ),
           ),
         ],
