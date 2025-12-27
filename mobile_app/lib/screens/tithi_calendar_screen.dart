@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/hover_scale_card.dart';
+import '../widgets/glass_icon.dart';
 
 class TithiCalendarScreen extends StatefulWidget {
   const TithiCalendarScreen({super.key});
@@ -15,7 +17,7 @@ class _TithiCalendarScreenState extends State<TithiCalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  
+
   // Events: Date -> List of Events
   final Map<DateTime, List<Map<String, String>>> _events = {
     DateTime(DateTime.now().year, DateTime.now().month, 11): [
@@ -53,7 +55,8 @@ class _TithiCalendarScreenState extends State<TithiCalendarScreen> {
           children: [
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(labelText: "Title (e.g., Rent)"),
+              decoration:
+                  const InputDecoration(labelText: "Title (e.g., Rent)"),
             ),
             TextField(
               controller: descController,
@@ -62,11 +65,14 @@ class _TithiCalendarScreenState extends State<TithiCalendarScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
               if (titleController.text.isNotEmpty && _selectedDay != null) {
-                final key = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
+                final key = DateTime(
+                    _selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
                 setState(() {
                   if (_events[key] == null) {
                     _events[key] = [];
@@ -95,102 +101,160 @@ class _TithiCalendarScreenState extends State<TithiCalendarScreen> {
       backgroundColor: const Color(0xFFF8F9FF),
       appBar: AppBar(
         title: Text(lang.t('deadlines')),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        titleTextStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addDeadline,
         backgroundColor: AppTheme.primaryBlue,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-            ),
-            child: TableCalendar(
-              firstDay: DateTime.utc(2020, 10, 16),
-              lastDay: DateTime.utc(2030, 3, 14),
-              focusedDay: _focusedDay,
-              calendarFormat: _calendarFormat,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              onFormatChanged: (format) {
-                if (_calendarFormat != format) setState(() => _calendarFormat = format);
-              },
-              onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-              eventLoader: _getEventsForDay,
-              calendarStyle: const CalendarStyle(
-                markerDecoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                todayDecoration: BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-                selectedDecoration: BoxDecoration(color: AppTheme.primaryBlue, shape: BoxShape.circle),
+          HoverScaleCard(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                // Shadows handled by HoverScaleCard
               ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
+              child: TableCalendar(
+                firstDay: DateTime.utc(2020, 10, 16),
+                lastDay: DateTime.utc(2030, 3, 14),
+                focusedDay: _focusedDay,
+                calendarFormat: _calendarFormat,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                onFormatChanged: (format) {
+                  if (_calendarFormat != format)
+                    setState(() => _calendarFormat = format);
+                },
+                onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+                eventLoader: _getEventsForDay,
+                calendarStyle: CalendarStyle(
+                  outsideDaysVisible: false,
+                  defaultTextStyle:
+                      const TextStyle(fontWeight: FontWeight.bold),
+                  weekendTextStyle: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.redAccent),
+
+                  // Custom Today Decoration (Soft Glow)
+                  todayDecoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.2),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        )
+                      ]),
+                  todayTextStyle: const TextStyle(
+                      color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+
+                  // Custom Selected Decoration
+                  selectedDecoration: const BoxDecoration(
+                      color: AppTheme.primaryBlue,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        )
+                      ]),
+                ),
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, date, events) {
+                    if (events.isNotEmpty) {
+                      return Positioned(
+                        bottom: 6,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: events.take(3).map((_) {
+                            return Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 1.5),
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: AppTheme
+                                    .warningOrange, // Alert color for deadlines
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
+                ),
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                ),
               ),
             ),
           ),
-          
           const SizedBox(height: 8),
-          
           Expanded(
-            child: _selectedDay == null 
-              ? Center(child: Text("Select a day", style: TextStyle(color: Colors.grey[400])))
-              : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: selectedEvents.length,
-              itemBuilder: (context, index) {
-                final event = selectedEvents[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+            child: _selectedDay == null
+                ? Center(
+                    child: Text("Select a day",
+                        style: TextStyle(color: Colors.grey[400])))
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: selectedEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = selectedEvents[index];
+                      return HoverScaleCard(
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              GlassIcon(
+                                icon: Icons.notifications_active_outlined,
+                                color:
+                                    index % 2 == 0 ? Colors.red : Colors.blue,
+                                size: 48,
+                                iconSize: 24,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(event['title'] ?? '',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
+                                    if (event['desc'] != null &&
+                                        event['desc']!.isNotEmpty)
+                                      Text(event['desc']!,
+                                          style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 13)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: index % 2 == 0 ? const Color(0xFFFFF4F2) : Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.notifications_active_outlined, 
-                          color: index % 2 == 0 ? Colors.red : Colors.blue
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(event['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            if (event['desc'] != null && event['desc']!.isNotEmpty)
-                              Text(event['desc']!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),

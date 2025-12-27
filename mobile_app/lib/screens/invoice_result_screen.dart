@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/hover_scale_card.dart';
 
 class InvoiceResultScreen extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -19,19 +20,32 @@ class InvoiceResultScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _Row("Vendor", fields['vendorName'] ?? "Unknown"),
-            _Row("Invoice Date", fields['date'] ?? "N/A"),
-            _Row("Total Amount", "₹${fmt(fields['totalAmount'])}"),
-            const Divider(),
-            _Row("CGST", "₹${fmt(tax['cgst'])}"),
-            _Row("SGST", "₹${fmt(tax['sgst'])}"),
-            _Row("IGST", "₹${fmt(tax['igst'])}"),
+            HoverScaleCard(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    _Row("Vendor", fields['vendorName'] ?? "Unknown"),
+                    _Row("Invoice Date", fields['date'] ?? "N/A"),
+                    _Row("Total Amount", "₹${fmt(fields['totalAmount'])}"),
+                    const Divider(),
+                    _Row("CGST", "₹${fmt(tax['cgst'])}"),
+                    _Row("SGST", "₹${fmt(tax['sgst'])}"),
+                    _Row("IGST", "₹${fmt(tax['igst'])}"),
+                  ],
+                ),
+              ),
+            ),
             const Spacer(),
             ElevatedButton(
               onPressed: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Invoice Saved Successfully"))
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Invoice Saved Successfully")));
               },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),

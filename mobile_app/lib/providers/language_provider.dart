@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class LanguageProvider with ChangeNotifier {
   Locale _locale = const Locale('en');
 
-  Locale _chatLocale = const Locale('hi'); 
+  Locale _chatLocale = const Locale('hi');
   String _userId = "user_${DateTime.now().millisecondsSinceEpoch}";
   bool _hasAskedLanguage = false;
 
@@ -39,7 +39,7 @@ class LanguageProvider with ChangeNotifier {
       'scan_invoice': 'Scan Invoice',
       'check_notice': 'Check Notice',
       'supplier_check': 'Supplier Check',
-      'expense_manager': 'Kaccha-Pakka',
+      'expense_manager': 'Expense',
       'ask_ai': 'Ask AI',
       'deadlines': 'Tithi Calendar',
       'recent_activity': 'Recent Activity',
@@ -54,8 +54,8 @@ class LanguageProvider with ChangeNotifier {
       'safe_msg': 'He files returns on time. Safe for ITC.',
       'risky_msg': 'He hasn\'t filed for 2 months. Don\'t pay tax!',
       'expense_title': 'Add Expense',
-      'pakka': 'Pakka (Bill)',
-      'kaccha': 'Kaccha (Cash)',
+      'pakka': 'Bill',
+      'kaccha': 'Cash',
       'save_entry': 'Save Entry',
       'amount': 'Amount',
       'desc': 'Description',
@@ -140,6 +140,7 @@ class LanguageProvider with ChangeNotifier {
   };
 
   String t(String key) {
-    return _localizedValues[_locale.languageCode]?[key] ?? _localizedValues['en']![key]!;
+    return _localizedValues[_locale.languageCode]?[key] ??
+        _localizedValues['en']![key]!;
   }
 }

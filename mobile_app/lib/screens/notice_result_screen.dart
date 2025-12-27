@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/hover_scale_card.dart';
 
 class NoticeResultScreen extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -12,7 +13,7 @@ class NoticeResultScreen extends StatelessWidget {
     final String riskLevel = fields['riskLevel'] ?? 'Unknown';
     // Logic for safe vs action
     final bool isSafe = ['safe', 'low'].contains(riskLevel.toLowerCase());
-    
+
     return Scaffold(
       appBar: AppBar(title: const Text("Notice Summary")),
       body: Padding(
@@ -22,13 +23,12 @@ class NoticeResultScreen extends StatelessWidget {
           children: [
             Center(
               child: Chip(
-                label: Text(
-                  isSafe ? "SAFE" : "ACTION REQUIRED", 
-                  style: const TextStyle(fontWeight: FontWeight.bold)
-                ),
+                label: Text(isSafe ? "SAFE" : "ACTION REQUIRED",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 backgroundColor: isSafe ? Colors.green : Colors.orange,
                 labelStyle: const TextStyle(color: Colors.white),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               ),
             ),
             const SizedBox(height: 16),
@@ -38,9 +38,8 @@ class NoticeResultScreen extends StatelessWidget {
             const Spacer(),
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Reply Generation Module - Coming Soon"))
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Reply Generation Module - Coming Soon")));
               },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
@@ -62,17 +61,19 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(value),
-          ],
+    return HoverScaleCard(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(value),
+            ],
+          ),
         ),
       ),
     );

@@ -8,9 +8,11 @@ import 'notice_result_screen.dart';
 import 'invoice_result_screen.dart';
 import 'supplier_check_screen.dart';
 import 'add_expense_screen.dart';
-import 'tithi_calendar_screen.dart';
+
 import '../theme/app_theme.dart';
-import 'chat_screen.dart';
+
+import '../widgets/hover_scale_card.dart';
+import '../widgets/glass_icon.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,7 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -66,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionsBuilder: (_, animation, __, child) {
           return SlideTransition(
             position: Tween(begin: const Offset(0, 0.1), end: Offset.zero)
-                .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                .animate(CurvedAnimation(
+                    parent: animation, curve: Curves.easeOutCubic)),
             child: FadeTransition(opacity: animation, child: child),
           );
         },
@@ -89,7 +93,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
               Text(_loadingText, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              Text(_loadingSubtext, style: Theme.of(context).textTheme.bodyMedium),
+              Text(_loadingSubtext,
+                  style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),
@@ -110,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF1E40AF)],
+                    colors: [Color(0xFF001F54), Color(0xFF003380)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -124,21 +129,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                             Column(
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(lang.t('app_title'), 
-                                  style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                                Text(lang.t('app_title'),
+                                    style: TextStyle(
+                                        color: Colors.white.withOpacity(0.6),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 4),
-                                Text("${lang.t('hello')} Ravi 🙏", 
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                                Text("${lang.t('hello')} Ravi",
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18, // Reduced from 24
+                                        fontWeight: FontWeight.w600)),
                               ],
                             ),
                             // Language Dropdown
                             DropdownButton<String>(
                               value: lang.locale.languageCode,
                               dropdownColor: const Color(0xFF0F172A),
-                              icon: const Icon(Icons.language, color: Colors.white),
+                              icon: const Icon(Icons.language,
+                                  color: Colors.white),
                               underline: Container(),
                               onChanged: (String? newValue) {
                                 if (newValue != null) {
@@ -146,9 +158,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 }
                               },
                               items: const [
-                                DropdownMenuItem(value: 'en', child: Text("Eng", style: TextStyle(color: Colors.white))),
-                                DropdownMenuItem(value: 'hi', child: Text("हिंदी", style: TextStyle(color: Colors.white))),
-                                DropdownMenuItem(value: 'mr', child: Text("मराठी", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(
+                                    value: 'en',
+                                    child: Text("Eng",
+                                        style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(
+                                    value: 'hi',
+                                    child: Text("हिंदी",
+                                        style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(
+                                    value: 'mr',
+                                    child: Text("मराठी",
+                                        style: TextStyle(color: Colors.white))),
                               ],
                             ),
                           ],
@@ -160,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.2)),
                           ),
                           child: Row(
                             children: [
@@ -171,18 +193,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     const Center(
                                       child: SizedBox(
-                                        height: 80, width: 80,
+                                        height: 80,
+                                        width: 80,
                                         child: CircularProgressIndicator(
                                           value: 0.85,
                                           strokeWidth: 8,
                                           backgroundColor: Colors.white24,
-                                          valueColor: AlwaysStoppedAnimation(Colors.greenAccent),
+                                          valueColor: AlwaysStoppedAnimation(
+                                              Colors.greenAccent),
                                         ),
                                       ),
                                     ),
                                     Center(
-                                      child: Text("85%", 
-                                        style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                      child: Text("85%",
+                                          style: GoogleFonts.outfit(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize:
+                                                  32)), // Increased from 20
                                     ),
                                   ],
                                 ),
@@ -192,11 +220,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(lang.t('health_score'), 
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                    Text(lang.t('health_score'),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20)), // Increased from 16
                                     const SizedBox(height: 4),
-                                    Text(lang.t('health_good'), 
-                                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                    Text(lang.t('health_good'),
+                                        style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.8),
+                                            fontSize: 14)),
                                   ],
                                 ),
                               ),
@@ -226,9 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(lang.t('quick_actions'), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(lang.t('quick_actions'),
+                        style: GoogleFonts.outfit(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
-                    
+
                     // Grid Actions
                     Row(
                       children: [
@@ -236,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _ActionTile(
                             title: lang.t('scan_invoice'),
                             icon: Icons.document_scanner_outlined,
-                            color: Colors.blue,
+                            color: Color(0xFF2979FF),
                             onTap: () => _handleScan(false),
                           ),
                         ),
@@ -245,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _ActionTile(
                             title: lang.t('check_notice'),
                             icon: Icons.warning_amber_rounded,
-                            color: Colors.orange,
+                            color: Color(0xFFFF9100),
                             onTap: () => _handleScan(true),
                           ),
                         ),
@@ -258,8 +294,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _ActionTile(
                             title: lang.t('supplier_check'),
                             icon: Icons.shield_outlined,
-                            color: Colors.teal,
-                            onTap: () => _navigateWithMotion(const SupplierCheckScreen()),
+                            color: Color(0xFF00BFA5),
+                            onTap: () => _navigateWithMotion(
+                                const SupplierCheckScreen()),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -267,30 +304,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _ActionTile(
                             title: lang.t('expense_manager'),
                             icon: Icons.account_balance_wallet_outlined,
-                            color: Colors.indigo,
-                            onTap: () => _navigateWithMotion(const AddExpenseScreen()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionTile(
-                            title: lang.t('ask_ai'),
-                            icon: Icons.mic_none_outlined,
-                            color: Colors.purple,
-                            onTap: () => _navigateWithMotion(const ChatScreen()),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _ActionTile(
-                            title: lang.t('deadlines'),
-                            icon: Icons.calendar_today_outlined,
-                            color: Colors.redAccent,
-                            onTap: () => _navigateWithMotion(const TithiCalendarScreen()),
+                            color: Color(0xFF3D5AFE),
+                            onTap: () =>
+                                _navigateWithMotion(const AddExpenseScreen()),
                           ),
                         ),
                       ],
@@ -302,8 +318,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(lang.t('recent_activity'), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text(lang.t('view_all'), style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                        Text(lang.t('recent_activity'),
+                            style: GoogleFonts.outfit(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(lang.t('view_all'),
+                            style: const TextStyle(
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -336,36 +357,38 @@ class _ActionTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionTile({required this.title, required this.icon, required this.color, required this.onTap});
+  const _ActionTile(
+      {required this.title,
+      required this.icon,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return HoverScaleCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        height: 110,
+        height: 112, // Multiple of 8 (14 * 8)
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
+          // Shadows are handled by HoverScaleCard
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
+            GlassIcon(
+              icon: icon,
+              color: color,
+              size: 48,
+              iconSize: 24,
             ),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), overflow: TextOverflow.ellipsis),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -380,35 +403,52 @@ class _DeadlineCard extends StatelessWidget {
   final String status;
   final bool isUrgent;
 
-  const _DeadlineCard({
-    required this.date, required this.month, required this.title, required this.status, this.isUrgent = false
-  });
+  const _DeadlineCard(
+      {required this.date,
+      required this.month,
+      required this.title,
+      required this.status,
+      this.isUrgent = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 12),
+      width: 144, // Multiple of 8 (18 * 8)
+      margin: const EdgeInsets.only(right: 16), // Fixed to 16px (8pt grid)
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isUrgent ? const Color(0xFFFFF4F2) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isUrgent ? Border.all(color: Colors.red.shade100) : Border.all(color: Colors.transparent),
+        border: isUrgent
+            ? Border.all(color: Colors.red.shade100)
+            : Border.all(color: Colors.transparent),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(date, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isUrgent ? Colors.red : Colors.black)),
+              Text(date,
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: isUrgent ? Colors.red : Colors.black)),
               const SizedBox(width: 4),
-              Text(month, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+              Text(month,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600])),
             ],
           ),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 4),
-          Text(status, style: TextStyle(fontSize: 12, color: isUrgent ? Colors.red : Colors.green)),
+          Text(status,
+              style: TextStyle(
+                  fontSize: 12, color: isUrgent ? Colors.red : Colors.green)),
         ],
       ),
     );
@@ -421,51 +461,61 @@ class _ActivityItem extends StatelessWidget {
   final String amount;
   final bool isCredit;
 
-  const _ActivityItem({
-    required this.title, required this.time, required this.amount, required this.isCredit
-  });
+  const _ActivityItem(
+      {required this.title,
+      required this.time,
+      required this.amount,
+      required this.isCredit});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
+    return HoverScaleCard(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16), // Fixed to 16px (8pt grid)
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          // Shadows handled by HoverScaleCard
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.receipt_long,
+                      size: 20, color: Colors.black54),
                 ),
-                child: const Icon(Icons.receipt_long, size: 20, color: Colors.black54),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  Text(time, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                ],
-              ),
-            ],
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isCredit ? Colors.green : Colors.black,
-              fontSize: 16,
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15)),
+                    Text(time,
+                        style:
+                            TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  ],
+                ),
+              ],
             ),
-          ),
-        ],
+            Text(
+              amount,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isCredit ? Colors.green : Colors.black,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

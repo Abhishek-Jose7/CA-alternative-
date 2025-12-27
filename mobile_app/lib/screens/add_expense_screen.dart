@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../widgets/hover_scale_card.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -36,53 +37,57 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         child: Column(
           children: [
             // Toggle
-            Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isPakka = true),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _isPakka ? Colors.green : Colors.transparent,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          lang.t('pakka'),
-                          style: TextStyle(
-                            color: _isPakka ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.bold,
+            HoverScaleCard(
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isPakka = true),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _isPakka ? Colors.green : Colors.transparent,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            lang.t('pakka'),
+                            style: TextStyle(
+                              color: _isPakka ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isPakka = false),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: !_isPakka ? Colors.orange : Colors.transparent,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          lang.t('kaccha'),
-                          style: TextStyle(
-                            color: !_isPakka ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isPakka = false),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color:
+                                !_isPakka ? Colors.orange : Colors.transparent,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            lang.t('kaccha'),
+                            style: TextStyle(
+                              color: !_isPakka ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 32),
