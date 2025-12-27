@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/language_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../widgets/hover_scale_card.dart';
 import '../theme/app_theme.dart';
 
@@ -23,6 +26,10 @@ class _ChatScreenState extends State<ChatScreen> {
       "text": "Namaste! I am your AI CA Assistant. Ask me anything."
     },
   ];
+
+  // Image Attachment
+  final ImagePicker _picker = ImagePicker();
+  XFile? _selectedImage;
 
   // Voice Features
   late stt.SpeechToText _speech;
@@ -71,10 +78,55 @@ class _ChatScreenState extends State<ChatScreen> {
     await _flutterTts.speak(text);
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source);
+    if (image != null) {
+      setState(() {
+        _selectedImage = image;
+      });
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.blue),
+                title: const Text("Take Photo"),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.purple),
+                title: const Text("Choose from Gallery"),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _sendMessage({bool isVoice = false}) async {
     if (_controller.text.isEmpty) return;
 
-    final query = _controller.text;
+    // Capture text BEFORE clearing controller
+    final query = _controller.text; 
     final lang = Provider.of<LanguageProvider>(context, listen: false);
 
     setState(() {
@@ -85,7 +137,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       // Check if it's an HSN query
-      if (query.toLowerCase().contains("tax") ||
+      if (_selectedImage != null) {
+         // Create local reference effectively
+         final image = _selectedImage;
+         setState(() => _selectedImage = null); // Clear immediately for UI
+         
+         final result = await _api.chatWithImage(query, image!);
+         final reply = result['data']['reply'];
+         _addBotResponse(reply, shouldSpeak: isVoice);
+      } else if (query.toLowerCase().contains("tax") ||
           query.toLowerCase().contains("hsn") ||
           query.toLowerCase().contains("gst rate")) {
         final result = await _api.searchHSN(query);
@@ -297,8 +357,44 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                if (_selectedImage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: kIsWeb 
+                            ? Image.network(
+                                _selectedImage!.path,
+                                height: 60,
+                                width: 60,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(_selectedImage!.path),
+                                height: 60, 
+                                width: 60, 
+                                fit: BoxFit.cover
+                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => setState(() => _selectedImage = null),
+                        )
+                      ],
+                    ),
+                  ),
+                Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.attach_file, color: Colors.grey),
+                  onPressed: _showAttachmentOptions,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
@@ -349,7 +445,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-          ),
+          ],
+        ),
+      ),
         ],
       ),
     );

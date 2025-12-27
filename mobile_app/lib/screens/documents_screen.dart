@@ -115,31 +115,102 @@ class _DocTile extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       color: Colors.white,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.grey.shade100,
-          child: Icon(icon, color: Colors.blueGrey),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text("$type • $date"),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (status != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor!.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: () {
+          _showDocPreview(context, title, type);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.shade100,
+            child: Icon(icon, color: Colors.blueGrey),
+          ),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text("$type • $date"),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (status != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusColor!.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(status!, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
-                child: Text(status!, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+              if (amount != null)
+                 Text(amount!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDocPreview(BuildContext context, String title, String type) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: Text(title, style: const TextStyle(fontSize: 16)),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () => Navigator.pop(ctx),
               ),
-            if (amount != null)
-               Text(amount!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.download, color: Colors.blue),
+                  onPressed: () {
+                     Navigator.pop(ctx);
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(content: Text("Downloading document..."))
+                     );
+                  },
+                )
+              ],
+            ),
+            Container(
+              height: 400,
+              width: double.infinity,
+              color: Colors.grey.shade100,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    type == "Invoice" ? Icons.receipt : Icons.description,
+                    size: 80, 
+                    color: Colors.grey.shade400
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Preview of $title",
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 8),
+                  const Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Text(
+                      "This is a demo document preview. In a real app, the PDF or Image would be rendered here using a PDF Viewer package.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
