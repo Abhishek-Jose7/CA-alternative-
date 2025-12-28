@@ -71,6 +71,7 @@ class AIService:
         except Exception as e:
             print(f"OCR Exception: {e}")
             return ""
+    def _clean_json(self, text):
         """Helper to clean Markdown JSON blocks from response."""
         text = text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
@@ -88,20 +89,20 @@ class AIService:
         Extract the following fields and return ONLY a valid JSON object:
         Fields:
         - notice_type
-        - date_of_issue
-        - amount_demanded (numeric)
+        - deadline (The date by which reply is needed)
+        - penalty (The total amount demanded)
         - reason (summary in Hinglish)
-        - risk_score (1-100)
+        - riskLevel (High, Medium, Low, or Safe)
         - action_required (Hinglish)
         - summary (Hinglish)
 
         JSON Format:
         {{
           "notice_type": "string",
-          "date_of_issue": "string",
-          "amount_demanded": 0,
+          "deadline": "string (Date or 'None')",
+          "penalty": "string (Amount or 'None')",
           "reason": "string",
-          "risk_score": 0,
+          "riskLevel": "string (High, Medium, Low, or Safe)",
           "action_required": "string",
           "summary": "string"
         }}
@@ -121,19 +122,78 @@ class AIService:
         ocr_text = await self._perform_ocr(image_path)
         
         prompt = f"""
-        Extract data from this invoice text into JSON:
+        Extract ALL data from this invoice text into a detailed JSON structure. 
         
         ---
         {ocr_text}
         ---
         
-        Fields:
-        - invoice_number
-        - date
-        - total_amount (numeric)
-        - vendor_name
-        - line_items (Array: description, hsn_code, quantity, rate, amount)
-        - gst_summary (Object: total_taxable_value, cgst, sgst, igst)
+        CRITICAL EXTRACTION RULES:
+        1. **Invoice Number**: STRICTLY look for the value under "Invoice No.". It is likely a small integer (e.g., "1", "2"). It is NOT the Date (e.g., "01-09-2021"). 
+        2. **Line Items Columns**: 
+           - **Item Name**: Description.
+           - **Qty**: The quantity count (e.g., "1", "10", "25"). distinct from Unit.
+           - **Unit**: The unit (e.g., "BOR", "PCS", "KGS").
+           - **Rate**: The price per unit (e.g., "2760.00", "70.0").
+           - **Amount**: The total line amount (Qty * Rate).
+           - **Tax**: The tax amount if visible.
+           - **Discount**: Discount amount if visible.
+        3. **Logic Check**: Qty * Rate should roughly equal Amount. If your extracted Qty * Rate >> Amount, you likely swapped Qty and Rate.
+        4. **Summary**:
+           - **Received Amount**: Look for "Received Amount" or "Paid". If not found, assume 0.
+           - **Balance Amount**: Look for "Balance Due" or "Balance Amount".
+        5. **Tax Analysis**: Extract the table showing Taxable Value, CGST, SGST by %.
+        
+        JSON Structure:
+        {{
+          "invoiceDetails": {{
+            "invoiceNumber": "string",
+            "invoiceDate": "string",
+            "dueDate": "string",
+            "totalAmount": numeric,
+            "receivedAmount": numeric,
+            "balanceAmount": numeric
+          }},
+          "vendor": {{
+            "name": "string",
+            "address": "string",
+            "gstin": "string",
+            "mobile": "string"
+          }},
+          "customer": {{
+            "name": "string",
+            "address": "string",
+            "mobile": "string"
+          }},
+          "lineItems": [
+            {{
+              "sNo": "string",
+              "description": "string",
+              "hsn": "string",
+              "qty": numeric,
+              "unit": "string",
+              "rate": numeric,
+              "discount": numeric,
+              "taxAmount": numeric,
+              "amount": numeric
+            }}
+          ],
+          "taxAnalysis": [
+             {{
+               "rate": "string",
+               "taxableValue": numeric,
+               "cgst": numeric,
+               "sgst": numeric,
+               "igst": numeric
+             }}
+          ],
+          "summary": {{
+             "totalTaxable": numeric,
+             "totalTax": numeric,
+             "roundOff": numeric,
+             "grandTotal": numeric
+          }}
+        }}
         
         JSON ONLY.
         """

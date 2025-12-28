@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/history_service.dart';
 import '../providers/language_provider.dart';
 import 'notice_result_screen.dart';
 import 'invoice_result_screen.dart';
@@ -314,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Recent Activity Stream (Simplified)
+                    // Recent Activity Stream (Connected to History)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -328,17 +329,45 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const _ActivityItem(
-                      title: "Rent Invoice #902",
-                      time: "2 hours ago",
-                      amount: "₹12,000",
-                      isCredit: false,
-                    ),
-                    const _ActivityItem(
-                      title: "ITC Claimed",
-                      time: "Yesterday",
-                      amount: "+ ₹4,500",
-                      isCredit: true,
+                    
+                    ListenableBuilder(
+                      listenable: HistoryService(),
+                      builder: (context, child) {
+                        final invoices = HistoryService().invoices;
+                        if (invoices.isEmpty) {
+                           // Fallback to dummy data if empty
+                           return Column(children: const [
+                             _ActivityItem(
+                                title: "Rent Invoice #902",
+                                time: "Sample",
+                                amount: "₹12,000",
+                                isCredit: false,
+                             ),
+                             _ActivityItem(
+                                title: "ITC Claimed",
+                                time: "Sample",
+                                amount: "+ ₹4,500",
+                                isCredit: true,
+                             ),
+                           ]);
+                        }
+                        
+                        return Column(
+                          children: invoices.map((inv) {
+                             // Safe extraction of data
+                             final details = inv.containsKey('data') ? inv['data'] : inv;
+                             final summary = details['invoiceDetails'] ?? {};
+                             final vendor = details['vendor'] ?? {};
+                             
+                             return _ActivityItem(
+                                title: vendor['name'] ?? "Invoice",
+                                time: "Just now",
+                                amount: "₹${summary['totalAmount'] ?? 0}",
+                                isCredit: false,
+                             );
+                          }).toList(),
+                        );
+                      }
                     ),
                   ],
                 ),
