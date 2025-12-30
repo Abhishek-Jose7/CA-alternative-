@@ -76,8 +76,20 @@ class AIService:
         text = text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
 
-    async def decode_notice(self, image_path: str) -> dict:
+    async def decode_notice(self, image_path: str, language: str = 'en') -> dict:
         ocr_text = await self._perform_ocr(image_path)
+        
+        print(f"DEBUG: OCR Text Sample: {ocr_text[:500]}...")
+        
+        # Map language code to prompt instruction
+        lang_map = {
+            'hi': "Hindi (Devanagari script)",
+            'mr': "Marathi (Devanagari script)",
+            'en': "English",
+            'gu': "Gujarati",
+            'ta': "Tamil"
+        }
+        target_lang = lang_map.get(language, "English")
         
         prompt = f"""
         Analyze this text extracted from an Indian GST Notice:
@@ -86,23 +98,26 @@ class AIService:
         {ocr_text}
         ---
 
-        Extract the following fields and return ONLY a valid JSON object:
+        Extract the following fields and return ONLY a valid JSON object.
+        If a specific field is not clearly found, look for synonyms or context clues.
+        If still not found, return "Not Found".
+
         Fields:
-        - notice_type
-        - deadline (The date by which reply is needed)
-        - penalty (The total amount demanded)
-        - reason (summary in Hinglish)
-        - riskLevel (High, Medium, Low, or Safe)
-        - action_required (Hinglish)
-        - summary (Hinglish)
+        - notice_type (e.g., "Show Cause Notice", "Demand Order", "Scrutiny")
+        - deadline (Look for "reply by", "due date", "within X days")
+        - penalty (Look for "Total Demand", "Tax + Interest + Penalty", amounts in table)
+        - reason (Summarize the core allegation in **{target_lang}**)
+        - riskLevel (Assess based on penalty amount and tone: High, Medium, Low)
+        - action_required (What should the user do? in **{target_lang}**)
+        - summary (Brief summary of the notice in **{target_lang}**)
 
         JSON Format:
         {{
           "notice_type": "string",
-          "deadline": "string (Date or 'None')",
-          "penalty": "string (Amount or 'None')",
+          "deadline": "string",
+          "penalty": "string",
           "reason": "string",
-          "riskLevel": "string (High, Medium, Low, or Safe)",
+          "riskLevel": "string",
           "action_required": "string",
           "summary": "string"
         }}
@@ -116,6 +131,7 @@ class AIService:
         )
 
         response_text = chat_completion.choices[0].message.content
+        print(f"DEBUG: LLM Raw Response: {response_text}")
         return self._clean_json(response_text)
 
     async def parse_invoice(self, image_path: str) -> dict:
@@ -233,29 +249,30 @@ class AIService:
         return json.loads(response_text)
 
     async def chat_with_ca(self, message: str, language: str = "en", user_id: str = None) -> dict:
-        lang_instruction = "Speak in **Hinglish** (Natural mix of Hindi and English)."
+        lang_instruction = "Speak in **Formal Hinglish** (Professional mix of Hindi and English). Use respectful terms like 'Aap', 'Kripya'."
         if language == 'hi':
-            lang_instruction = "Speak in pure, formal but friendly **Hindi** (Devanagari script)."
+            lang_instruction = "Speak in **Formal Hindi** (Shuddh Hindi / Devanagari script). Use respectful address like 'Namaste', 'Mahoday', 'Aap'."
         elif language == 'mr':
-            lang_instruction = "Speak in **Marathi** (Devanagari script) effectively like a helpful local CA."
+            lang_instruction = "Speak in **Formal Marathi** (Devanagari script). Use professional terms and respectful address like 'Aapan'."
         elif language == 'gu':
-            lang_instruction = "Speak in **Gujarati**."
+            lang_instruction = "Speak in **Formal Gujarati**. Use respectful and professional language."
         elif language == 'ta':
-            lang_instruction = "Speak in **Tamil**."
+            lang_instruction = "Speak in **Formal Tamil**. Use respectful and professional language."
             
         system_prompt = f"""
-        You are a friendly, knowledgeable Indian Chartered Accountant (CA).
-        Your client is a small Kirana store owner.
+        You are a highly professional and knowledgeable Indian Chartered Accountant (CA).
+        Your client is a business owner who expects precise and formal advice.
         
         Instructions:
         1. {lang_instruction}
-        2. Be authoritative but calm. 
-        3. Do not give illegal advice.
-        4. Keep answers concise (under 3 sentences unless asked for detail).
+        2. Maintain a strict, professional, and formal tone at all times. Avoid slang or overly casual language.
+        3. Be authoritative, precise, and polite.
+        4. Do not give illegal advice.
+        5. Keep answers concise (under 3 sentences unless asked for detail).
         
         Example (if Hinglish):
         User: "Mera ITC block ho gaya."
-        You: "Chinta mat kariye. Usually ye tab hota hai jab supplier ne return file nahi kiya. Aap 2A/2B check kijiye, main help karta hoon."
+        You: "Kripya chinta na karein. Yeh sadharanatah tab hota hai jab aapke supplier ne apna return samay par file nahi kiya hota. Aap 2A/2B verify karein, main aapki sahayata karunga."
         """
         
         # Initialize history

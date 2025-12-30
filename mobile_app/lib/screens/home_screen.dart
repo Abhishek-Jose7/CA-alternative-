@@ -8,7 +8,7 @@ import '../providers/language_provider.dart';
 import 'notice_result_screen.dart';
 import 'invoice_result_screen.dart';
 import 'supplier_check_screen.dart';
-import 'add_expense_screen.dart';
+import 'expenses_screen.dart';
 
 import '../theme/app_theme.dart';
 
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       Map<String, dynamic> response;
       if (isNotice) {
-        response = await _api.decodeNotice(pickedFile);
+        response = await _api.decodeNotice(pickedFile, language: lang.locale.languageCode);
         if (!mounted) return;
         _navigateWithMotion(NoticeResultScreen(data: response['data']));
       } else {
@@ -129,114 +129,163 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(lang.t('app_title'),
+                                Text(lang.t('app_title').toUpperCase(),
                                     style: TextStyle(
-                                        color: Colors.white.withOpacity(0.6),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500)),
-                                const SizedBox(height: 4),
-                                Text("${lang.t('hello')} Ravi",
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18, // Reduced from 24
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 10,
+                                        letterSpacing: 1.2,
                                         fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(lang.t('hello'),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w300)),
+                                    const SizedBox(width: 6),
+                                    const Text("Ravi",
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
                               ],
                             ),
-                            // Language Dropdown
-                            DropdownButton<String>(
-                              value: lang.locale.languageCode,
-                              dropdownColor: const Color(0xFF0F172A),
-                              icon: const Icon(Icons.language,
-                                  color: Colors.white),
-                              underline: Container(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  lang.setLanguage(newValue);
-                                }
-                              },
-                              items: const [
-                                DropdownMenuItem(
-                                    value: 'en',
-                                    child: Text("Eng",
-                                        style: TextStyle(color: Colors.white))),
-                                DropdownMenuItem(
-                                    value: 'hi',
-                                    child: Text("हिंदी",
-                                        style: TextStyle(color: Colors.white))),
-                                DropdownMenuItem(
-                                    value: 'mr',
-                                    child: Text("मराठी",
-                                        style: TextStyle(color: Colors.white))),
+                            // Actions Row
+                            Row(
+                              children: [
+                                // Notification Button
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.1))
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+                                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("No new notifications"))
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Language Dropdown
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.1))
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: lang.locale.languageCode,
+                                      dropdownColor: const Color(0xFF0F172A),
+                                      icon: const Icon(Icons.language, color: Colors.white, size: 20),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          lang.setLanguage(newValue);
+                                        }
+                                      },
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 'en',
+                                            child: Text("Eng", style: TextStyle(color: Colors.white, fontSize: 13))),
+                                        DropdownMenuItem(
+                                            value: 'hi',
+                                            child: Text("हिंदी", style: TextStyle(color: Colors.white, fontSize: 13))),
+                                        DropdownMenuItem(
+                                            value: 'mr',
+                                            child: Text("मराठी", style: TextStyle(color: Colors.white, fontSize: 13))),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 32),
-                        // Health Score Card
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                                color: Colors.white.withOpacity(0.2)),
-                          ),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                height: 80,
-                                width: 80,
-                                child: Stack(
-                                  children: [
-                                    const Center(
-                                      child: SizedBox(
-                                        height: 80,
-                                        width: 80,
-                                        child: CircularProgressIndicator(
-                                          value: 0.85,
-                                          strokeWidth: 8,
-                                          backgroundColor: Colors.white24,
-                                          valueColor: AlwaysStoppedAnimation(
-                                              Colors.greenAccent),
+                        const SizedBox(height: 32),
+                        // Dynamic Health Score Card
+                        ListenableBuilder(
+                          listenable: HistoryService(),
+                          builder: (context, child) {
+                            final score = HistoryService().calculateHealthScore();
+                            return Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    height: 64,
+                                    width: 64,
+                                    child: Stack(
+                                      children: [
+                                        Center(
+                                          child: SizedBox(
+                                            height: 64,
+                                            width: 64,
+                                            child: CircularProgressIndicator(
+                                              value: score / 100,
+                                              strokeWidth: 6,
+                                              backgroundColor: Colors.white24,
+                                              valueColor: AlwaysStoppedAnimation(
+                                                  score > 70 ? Colors.greenAccent : (score > 40 ? Colors.orangeAccent : Colors.redAccent)),
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        Center(
+                                          child: Text("$score%",
+                                              style: GoogleFonts.outfit(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 22)),
+                                        ),
+                                      ],
                                     ),
-                                    Center(
-                                      child: Text("85%",
-                                          style: GoogleFonts.outfit(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize:
-                                                  32)), // Increased from 20
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(lang.t('health_score'),
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20)),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                            score == 100 
+                                              ? lang.t('health_good') 
+                                              : (score > 70 ? "Checks pass. Stay alert." : "Action Needed: Check Notices!"),
+                                            style: TextStyle(
+                                                color: Colors.white.withOpacity(0.8),
+                                                fontSize: 14)),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(lang.t('health_score'),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 20)), // Increased from 16
-                                    const SizedBox(height: 4),
-                                    Text(lang.t('health_good'),
-                                        style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.8),
-                                            fontSize: 14)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          }
                         ),
                       ],
                     ),
@@ -307,10 +356,36 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.account_balance_wallet_outlined,
                             color: Color(0xFF3D5AFE),
                             onTap: () =>
-                                _navigateWithMotion(const AddExpenseScreen()),
+                                _navigateWithMotion(const ExpensesScreen()),
                           ),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Upcoming Deadlines Section
+                    Text("Upcoming Deadlines", // You might want to localize this
+                        style: GoogleFonts.outfit(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ListenableBuilder(
+                        listenable: HistoryService(),
+                        builder: (context, child) {
+                          final deadlines = HistoryService().getUpcomingDeadlines();
+                          return Row(
+                            children: deadlines.map((d) => _DeadlineCard(
+                              date: d['date'],
+                              month: d['month'],
+                              title: d['title'],
+                              status: d['status'],
+                              isUrgent: d['isUrgent'],
+                            )).toList(),
+                          );
+                        }
+                      ),
                     ),
 
                     const SizedBox(height: 32),

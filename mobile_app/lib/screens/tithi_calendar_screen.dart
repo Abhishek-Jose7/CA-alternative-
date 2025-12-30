@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/language_provider.dart';
+import '../services/history_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hover_scale_card.dart';
 import '../widgets/glass_icon.dart';
@@ -73,6 +74,7 @@ class _TithiCalendarScreenState extends State<TithiCalendarScreen> {
               if (titleController.text.isNotEmpty && _selectedDay != null) {
                 final key = DateTime(
                     _selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
+                HistoryService().addDeadline(titleController.text, key);
                 setState(() {
                   if (_events[key] == null) {
                     _events[key] = [];

@@ -10,8 +10,8 @@ class ApiService {
   // Assuming standard localhost for now, user might need to handle CORS on backend if this fails differently.
   static const String baseUrl = "http://127.0.0.1:8000"; 
 
-  Future<Map<String, dynamic>> decodeNotice(XFile imageFile) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/notice/decode'));
+  Future<Map<String, dynamic>> decodeNotice(XFile imageFile, {String language = 'en'}) async {
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/notice/decode?language=$language'));
     
     // Read bytes for web compatibility
     final bytes = await imageFile.readAsBytes();

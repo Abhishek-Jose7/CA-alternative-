@@ -19,6 +19,7 @@ class LanguageProvider with ChangeNotifier {
 
   void setLanguage(String code) {
     _locale = Locale(code);
+    _chatLocale = Locale(code); // Automatically sync chat language
     notifyListeners();
   }
 
@@ -30,7 +31,7 @@ class LanguageProvider with ChangeNotifier {
   // Simple Translation Dictionary
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'app_title': 'Kirana Guard',
+      'app_title': 'KiranaSaathi',
       'hello': 'Namaste,',
       'ready_help': 'Your Pocket CA is ready to help',
       'health_score': 'GST Health Score',
@@ -64,9 +65,10 @@ class LanguageProvider with ChangeNotifier {
       'edit_profile': 'Edit Profile',
       'business_details': 'Business Details',
       'add_deadline': 'Add Deadline',
+      'add_expense': 'Add Expense',
     },
     'hi': {
-      'app_title': 'किराना गार्ड',
+      'app_title': 'किराना साथी',
       'hello': 'नमस्ते,',
       'ready_help': 'आपका पर्सनल CA मदद के लिए तैयार है',
       'health_score': 'GST हेल्थ स्कोर',
@@ -100,9 +102,10 @@ class LanguageProvider with ChangeNotifier {
       'edit_profile': 'प्रोफाइल बदलें',
       'business_details': 'बिज़नेस विवरण',
       'add_deadline': 'डेडलाइन जोड़ें',
+      'add_expense': 'खर्चा जोड़ें',
     },
     'mr': {
-      'app_title': 'किराणा गार्ड',
+      'app_title': 'किराणा साथी',
       'hello': 'नमस्कार,',
       'ready_help': 'तुमचा पॉकेट CA मदतीसाठी तयार आहे',
       'health_score': 'GST हेल्थ स्कोर',
@@ -138,9 +141,8 @@ class LanguageProvider with ChangeNotifier {
       'add_deadline': 'डेडलाइन जोडा',
     }
   };
-
   String t(String key) {
     return _localizedValues[_locale.languageCode]?[key] ??
-        _localizedValues['en']![key]!;
+        _localizedValues['en']?[key] ?? key;
   }
 }

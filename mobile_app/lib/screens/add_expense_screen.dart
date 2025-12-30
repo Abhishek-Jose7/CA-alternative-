@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../services/history_service.dart';
 import '../widgets/hover_scale_card.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -16,9 +17,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _descCtrl = TextEditingController();
 
   void _save() {
-    // Save logic here (e.g., Firestore)
-    // For now, just go back
     if (_amountCtrl.text.isNotEmpty) {
+      // Save to HistoryService
+      HistoryService().addEntry({
+        'type': 'expense',
+        'title': _descCtrl.text.isEmpty ? (_isPakka ? "Bill Expense" : "Cash Expense") : _descCtrl.text,
+        'amount': _amountCtrl.text,
+        'date': DateTime.now().toString().split(' ')[0],
+        'isPakka': _isPakka,
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Expense Saved!")),
       );

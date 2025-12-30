@@ -10,7 +10,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/decode")
-async def decode_notice(file: UploadFile = File(...)):
+async def decode_notice(file: UploadFile = File(...), language: str = "en"):
     try:
         # Save temp file
         file_ext = file.filename.split(".")[-1]
@@ -21,7 +21,7 @@ async def decode_notice(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
             
         # Call AI Service
-        result = await gemini_service.decode_notice(file_path)
+        result = await gemini_service.decode_notice(file_path, language=language)
         
         # Cleanup (optional, or keep for Cloud Storage upload)
         # os.remove(file_path)
