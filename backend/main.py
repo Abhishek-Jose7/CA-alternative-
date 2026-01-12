@@ -3,7 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import notice, invoice, chatbot
+from routes import notice, invoice, chatbot, ca
 import os
 
 app = FastAPI(title="VyaparGuard API", version="1.0")
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(notice.router, prefix="/notice", tags=["Notice"])
 app.include_router(invoice.router, prefix="/invoice", tags=["Invoice"])
 app.include_router(chatbot.router, prefix="/api", tags=["Chatbot"])
+app.include_router(ca.router, prefix="/ca", tags=["CA Queue"])
 
 @app.get("/")
 def read_root():

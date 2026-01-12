@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import 'loading_screen.dart';
 import 'notice_result_screen.dart';
+import '../services/history_service.dart';
+import 'package:provider/provider.dart';
 
 class ScanNoticeScreen extends StatefulWidget {
   const ScanNoticeScreen({super.key});
@@ -35,6 +37,15 @@ class _ScanNoticeScreenState extends State<ScanNoticeScreen> {
       final response = await _api.decodeNotice(image);
       
       if (!mounted) return;
+
+      // Save to history
+      final history = Provider.of<HistoryService>(context, listen: false);
+      history.addEntry({
+        'type': 'notice',
+        'title': response['data']?['notice_type'] ?? 'GST Notice',
+        'date': response['data']?['deadline'] ?? DateTime.now().toIso8601String().split('T')[0],
+        'data': response['data']
+      });
       
       // Remove loading screen (pop) then replace current screen with Result
       Navigator.pop(context); // Pop Loading

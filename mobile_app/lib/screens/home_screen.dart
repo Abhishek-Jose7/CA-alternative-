@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
@@ -144,14 +146,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Text(lang.t('hello'),
-                                        style: const TextStyle(
+                                    const Text("Namaste,",
+                                        style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 22,
                                             fontWeight: FontWeight.w300)),
-                                    const SizedBox(width: 6),
-                                    const Text("Ravi",
-                                        style: TextStyle(
+                                    const SizedBox(width: 8),
+                                    Text(
+                                        FirebaseAuth.instance.currentUser?.displayName?.split(" ")[0] ?? "User",
+                                        style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 22,
                                             fontWeight: FontWeight.w600)),
@@ -310,6 +313,68 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1.5 Pending Setup Notification
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser?.uid)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data!.exists) {
+                          final data = snapshot.data!.data() as Map<String, dynamic>;
+                          final gstin = data['gstin'] ?? "";
+                          if (gstin.isNotEmpty) return const SizedBox.shrink();
+                        }
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.orange.shade800),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Setup Pending",
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange.shade900,
+                                      ),
+                                    ),
+                                    Text(
+                                      "Please fill in your business details in Profile.",
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: Colors.orange.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // This is a bit tricky since we are in a tab, but for now just show a message 
+                                  // or we could use the wrapper state to switch tabs if we had a controller.
+                                  // For simplicity, we'll just advise them to go to Profile.
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Go to Profile tab to complete setup")),
+                                  );
+                                },
+                                child: Text("FILL", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+
                     Text(lang.t('quick_actions'),
                         style: GoogleFonts.outfit(
                             fontSize: 18, fontWeight: FontWeight.bold)),

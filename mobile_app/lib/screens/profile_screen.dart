@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hover_scale_card.dart';
+import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,24 +16,101 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: "Ravi Kirana Store");
-  final TextEditingController _phoneController =
-      TextEditingController(text: "+91 98765 43210");
-  final TextEditingController _gstController =
-      TextEditingController(text: "23ABCDE1234F1Z5");
+  late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _gstController;
+  bool _isSaving = false;
+  bool _isLoadingData = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _nameController = TextEditingController(text: user?.displayName ?? "");
+    _phoneController = TextEditingController(text: user?.phoneNumber ?? "");
+    _gstController = TextEditingController(text: "");
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _nameController.text = data['businessName'] ?? user.displayName ?? "";
+          _phoneController.text = data['phoneNumber'] ?? user.phoneNumber ?? "";
+          _gstController.text = data['gstin'] ?? "";
+          _isLoadingData = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoadingData = false);
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+      if (mounted) setState(() => _isLoadingData = false);
+    }
+  }
 
   bool _isEditing = false;
 
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'businessName': _nameController.text,
+        'phoneNumber': _phoneController.text,
+        'gstin': _gstController.text,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Also update Firebase Auth display name if changed
+      if (_nameController.text != user.displayName) {
+        await user.updateDisplayName(_nameController.text);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Profile saved successfully!", style: GoogleFonts.outfit()),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() {
+          _isEditing = false;
+          _isSaving = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to save profile: $e", style: GoogleFonts.outfit()),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
   void _toggleEdit() {
     if (_isEditing) {
-      // Save logic (Mock)
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Profile Updated!")));
+      _saveProfile();
+    } else {
+      setState(() {
+        _isEditing = true;
+      });
     }
-    setState(() {
-      _isEditing = !_isEditing;
-    });
   }
 
   @override
@@ -57,11 +138,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppTheme.primaryBlue.withOpacity(0.2),
                               width: 2),
                         ),
-                        child: const CircleAvatar(
+                        child: CircleAvatar(
                           radius: 44,
                           backgroundColor: AppTheme.primaryBlue,
-                          child: Text("RK",
-                              style: TextStyle(
+                          child: Text(_nameController.text.substring(0, 1).toUpperCase(),
+                              style: const TextStyle(
                                   fontSize: 28,
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold)),
@@ -90,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _nameController.text,
+                    _nameController.text.isEmpty ? "Complete your profile" : _nameController.text,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -99,10 +180,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _gstController.text,
-                    style: const TextStyle(
+                    _gstController.text.isEmpty ? "GSTIN: Pending Set-up" : "GSTIN: ${_gstController.text}",
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.textGrey,
+                      color: _gstController.text.isEmpty ? Colors.orange : AppTheme.textGrey,
+                      fontWeight: _gstController.text.isEmpty ? FontWeight.bold : FontWeight.normal,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -126,22 +208,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            _isEditing ? Icons.check : Icons.edit_outlined,
-                            size: 14,
-                            color: _isEditing
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                          ),
+                          _isLoadingData || _isSaving
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Icon(
+                                  _isEditing ? Icons.check : Icons.edit_outlined,
+                                  size: 14,
+                                  color: _isEditing ? Colors.white : Colors.grey.shade700,
+                                ),
                           const SizedBox(width: 6),
                           Text(
-                            _isEditing ? "Save Changes" : "Edit Profile",
+                            _isEditing ? (_isSaving ? "Saving..." : "Save Changes") : "Edit Profile",
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: _isEditing
-                                    ? Colors.white
-                                    : Colors.grey.shade800),
+                                color: _isEditing ? Colors.white : Colors.grey.shade800),
                           ),
                         ],
                       ),
@@ -355,11 +439,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               height: 1,
                               color: Colors.grey.shade100,
                               indent: 60),
-                          const _SettingsRow(
-                            icon: Icons.logout,
-                            title: "Logout",
-                            isDestructive: true,
-                            showChevron: false,
+                          InkWell(
+                            onTap: () async {
+                              final auth = Provider.of<AuthService>(context, listen: false);
+                              await auth.logout();
+                            },
+                            child: const _SettingsRow(
+                              icon: Icons.logout,
+                              title: "Logout",
+                              isDestructive: true,
+                              showChevron: false,
+                            ),
                           ),
                         ],
                       ),

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HistoryService extends ChangeNotifier {
   static final HistoryService _instance = HistoryService._internal();
@@ -6,7 +8,36 @@ class HistoryService extends ChangeNotifier {
   HistoryService._internal() {
     // Check deadlines on init
     checkComplianceStatus();
-    generateDummyData();
+    _initFromFirebase();
+  }
+
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _initFromFirebase() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      // Fetch history from Firestore
+      final snapshot = await _db.collection('users').doc(user.uid).collection('history').orderBy('timestamp', descending: true).get();
+      _history.clear();
+      for (var doc in snapshot.docs) {
+        _history.add(doc.data());
+      }
+      
+      // Fetch deadlines
+      final deadlineSnap = await _db.collection('users').doc(user.uid).collection('deadlines').get();
+      _deadlines.clear();
+      for (var doc in deadlineSnap.docs) {
+        var data = doc.data();
+        _deadlines.add({
+          'title': data['title'],
+          'date': DateTime.parse(data['date'])
+        });
+      }
+      notifyListeners();
+    } else {
+      generateDummyData();
+    }
   }
 
   final List<Map<String, dynamic>> _history = [];
@@ -28,6 +59,12 @@ class HistoryService extends ChangeNotifier {
     
     _history.insert(0, entry);
     notifyListeners();
+    
+    // Sync to Firestore if logged in
+    final user = _auth.currentUser;
+    if (user != null) {
+      _db.collection('users').doc(user.uid).collection('history').add(entry);
+    }
   }
 
   // Alias for backward compatibility
@@ -130,6 +167,14 @@ class HistoryService extends ChangeNotifier {
   void addDeadline(String title, DateTime date) {
     _deadlines.add({'title': title, 'date': date});
     notifyListeners();
+
+    final user = _auth.currentUser;
+    if (user != null) {
+      _db.collection('users').doc(user.uid).collection('deadlines').add({
+        'title': title,
+        'date': date.toIso8601String()
+      });
+    }
   }
 
   // --- 3. NOTIFICATION SYSTEM (Logic Only) ---

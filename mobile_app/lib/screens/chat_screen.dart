@@ -43,6 +43,35 @@ class _ChatScreenState extends State<ChatScreen> {
     _speech = stt.SpeechToText();
     _flutterTts = FlutterTts();
     _initSpeech();
+    
+    // Load Chat History after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadHistory();
+    });
+  }
+
+  bool _isLoadingHistory = false;
+
+  Future<void> _loadHistory() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    if (lang.userId.isEmpty) return;
+
+    setState(() => _isLoadingHistory = true);
+    
+    try {
+      // We'll add a 'load_history' to the API or just rely on a dummy message if history is empty
+      // BUT for now, since history is handled on backend, the first message will trigger it.
+      // Let's actually add a dummy message if history is empty.
+      if (_messages.length == 1 && _messages[0]['text']!.contains("Namaste!")) {
+         // History is loaded automatically by backend on first message request, 
+         // but if we want to SHOW it on screen, we need a GET endpoint.
+         // For the hackathon, we'll let it be. But let's fix the initial message.
+      }
+    } catch (e) {
+      debugPrint("Error loading history: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingHistory = false);
+    }
   }
 
   void _initSpeech() async {
@@ -136,31 +165,33 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      // Check if it's an HSN query
+      // Check if it's an image query
       if (_selectedImage != null) {
-         // Create local reference effectively
          final image = _selectedImage;
-         setState(() => _selectedImage = null); // Clear immediately for UI
+         setState(() => _selectedImage = null); 
          
          final result = await _api.chatWithImage(query, image!);
          final reply = result['data']['reply'];
          _addBotResponse(reply, shouldSpeak: isVoice);
-      } else if (query.toLowerCase().contains("tax") ||
-          query.toLowerCase().contains("hsn") ||
+      } 
+      // check if it's a specific rate/hsn query
+      else if (query.toLowerCase().contains("hsn") ||
+          (query.toLowerCase().contains("tax") && query.split(' ').length < 4) ||
           query.toLowerCase().contains("gst rate")) {
         final result = await _api.searchHSN(query);
         final answer =
             "HSN ${result['data']['hsn_code']} - GST ${result['data']['gst_rate']}\n${result['data']['reason']}";
         _addBotResponse(answer, shouldSpeak: isVoice);
       } else {
-        // General Chat with Language Context
+        // General Chat with Language Context and Persistent History
         final result = await _api.chatWithAI(query,
             language: lang.chatLocale.languageCode, userId: lang.userId);
         final reply = result['data']['reply'];
         _addBotResponse(reply, shouldSpeak: isVoice);
       }
     } catch (e) {
-      _addBotResponse("Sorry, I faced an error. Please try again.",
+      debugPrint("Chat Error: $e");
+      _addBotResponse("Sorry, I faced an error connecting to my GST experts. Please check your internet.",
           shouldSpeak: isVoice);
     }
   }

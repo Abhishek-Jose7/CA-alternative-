@@ -1,151 +1,311 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/history_service.dart';
+import '../theme/app_theme.dart';
 
-class DocumentsScreen extends StatelessWidget {
+class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
+
+  @override
+  State<DocumentsScreen> createState() => _DocumentsScreenState();
+}
+
+class _DocumentsScreenState extends State<DocumentsScreen> {
+  String _selectedCategory = 'All';
+  final List<String> _categories = ['All', 'Notices', 'Invoices', 'Filings'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
-      appBar: AppBar(title: const Text("My Documents"), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
-      body: ListenableBuilder(
-        listenable: HistoryService(),
-        builder: (context, child) {
-          final history = HistoryService().history;
-          // Filter only docs (invoices and notices)
-          final docs = history.where((e) => ['invoice', 'notice'].contains(e['type'])).toList();
+      body: CustomScrollView(
+        slivers: [
+          // 1. Premium Header
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppTheme.primaryBlue,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: Text(
+                "My Documents",
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+              ),
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF001F54), Color(0xFF003380)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-          if (docs.isEmpty) {
-             return Center(
-               child: Column(
-                 mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-                   Icon(Icons.folder_open, size: 60, color: Colors.grey[300]),
-                   const SizedBox(height: 16),
-                   const Text("No documents saved yet"),
-                 ],
-               ),
-             );
-          }
+          // 2. Category Filter Chips
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              color: Colors.white,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: _categories.map((cat) {
+                    final bool isSelected = _selectedCategory == cat;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        label: Text(cat),
+                        selected: isSelected,
+                        onSelected: (val) {
+                          setState(() => _selectedCategory = cat);
+                        },
+                        selectedColor: AppTheme.primaryBlue.withOpacity(0.2),
+                        checkmarkColor: AppTheme.primaryBlue,
+                        labelStyle: GoogleFonts.outfit(
+                          color: isSelected ? AppTheme.primaryBlue : AppTheme.textGrey,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        backgroundColor: Colors.grey.shade50,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade200),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
 
-          return ListView.builder(
+          // 3. Document List
+          SliverPadding(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-               // Reverse order to show newest first? NO, usually history is appended.
-               // Let's reverse access:
-               final doc = docs[docs.length - 1 - index];
-               
-               // Extract logic
-               String title = doc['title'] ?? "Document";
-               String date = doc['date'] ?? "";
-               String type = (doc['type'] ?? "Doc").toString().toUpperCase();
-               String status = doc['status'] ?? ""; 
-               Color statusColor = Colors.grey;
-               IconData icon = Icons.description;
-               
-               if (type == 'INVOICE') {
-                  icon = Icons.receipt_long;
-                  title = doc['data']?['vendor']?['name'] ?? "Invoice";
-                  final amt = doc['data']?['invoiceDetails']?['totalAmount'];
-                  if (amt != null) status = "₹$amt";
-                  statusColor = Colors.blue;
-               } else if (type == 'NOTICE') {
-                  icon = Icons.warning_amber_rounded;
-                  title = doc['data']?['notice_type'] ?? "GST Notice";
-                  final risk = doc['data']?['riskLevel']?.toString().toLowerCase() ?? "";
-                  if (risk.contains("safe")) {
-                     status = "SAFE";
-                     statusColor = Colors.green;
-                  } else {
-                     status = "ACTION REQ";
-                     statusColor = Colors.orange;
-                  }
-               }
+            sliver: ListenableBuilder(
+              listenable: HistoryService(),
+              builder: (context, child) {
+                final history = HistoryService().history;
+                
+                // Filtering Logic
+                var docs = history.where((e) => ['invoice', 'notice'].contains(e['type'])).toList();
+                if (_selectedCategory == 'Notices') {
+                  docs = docs.where((e) => e['type'] == 'notice').toList();
+                } else if (_selectedCategory == 'Invoices') {
+                  docs = docs.where((e) => e['type'] == 'invoice').toList();
+                } else if (_selectedCategory == 'Filings') {
+                  docs = []; // Placeholder for actual filings
+                }
 
-               return _DocTile(
-                 title: title,
-                 date: date,
-                 type: type,
-                 trailingText: status,
-                 trailingColor: statusColor,
-                 icon: icon,
-                 onTap: () {
-                    _showDocPreview(context, title, type);
-                 },
-               );
-            },
+                if (docs.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.folder_open, size: 60, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            "No $_selectedCategory found",
+                            style: GoogleFonts.outfit(color: AppTheme.textGrey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final doc = docs[docs.length - 1 - index];
+                      String title = doc['title'] ?? "Document";
+                      String date = doc['date'] ?? "";
+                      String type = (doc['type'] ?? "Doc").toString().toUpperCase();
+                      String status = doc['status'] ?? ""; 
+                      Color statusColor = Colors.grey;
+                      IconData icon = Icons.description;
+                      
+                      if (type == 'INVOICE') {
+                        icon = Icons.receipt_long;
+                        title = doc['data']?['vendor']?['name'] ?? title;
+                        final amt = doc['data']?['invoiceDetails']?['totalAmount'];
+                        if (amt != null) status = "₹$amt";
+                        statusColor = AppTheme.primaryBlue;
+                      } else if (type == 'NOTICE') {
+                        icon = Icons.warning_amber_rounded;
+                        title = doc['data']?['notice_type'] ?? title;
+                        final risk = doc['data']?['riskLevel']?.toString().toLowerCase() ?? "";
+                        if (risk.contains("safe")) {
+                          status = "SAFE";
+                          statusColor = Colors.green;
+                        } else {
+                          status = "ACTION REQ";
+                          statusColor = Colors.orange;
+                        }
+                      }
+
+                      if (doc['data']?['needs_ca_review'] == true) {
+                        status = "CA REVIEW REQ";
+                        statusColor = Colors.redAccent;
+                      }
+
+                      return _DocTile(
+                        title: title,
+                        date: date,
+                        type: type,
+                        trailingText: status,
+                        trailingColor: statusColor,
+                        icon: icon,
+                        onTap: () => _showDocPreview(context, doc),
+                      );
+                    },
+                    childCount: docs.length,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Upload functionality coming soon!")),
           );
-        }
+        },
+        backgroundColor: AppTheme.primaryBlue,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  void _showDocPreview(BuildContext context, String title, String type) {
+  void _showDocPreview(BuildContext context, Map<String, dynamic> doc) {
+    final String type = (doc['type'] ?? "").toString().toUpperCase();
+    final String title = doc['title'] ?? "Document";
+    final data = doc['data'] ?? {};
+    final ragGuidance = data['guidance'];
+    final validation = data['validation'];
+    final needsCa = data['needs_ca_review'] == true;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppBar(
-              title: Text(title, style: const TextStyle(fontSize: 16)),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              centerTitle: true,
-              automaticallyImplyLeading: false,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => Navigator.pop(ctx),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: Text(title, style: const TextStyle(fontSize: 16)),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: true,
+                automaticallyImplyLeading: false,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              if (needsCa)
+                Container(
+                  width: double.infinity,
+                  color: Colors.redAccent.withOpacity(0.1),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_user, color: Colors.redAccent, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          "Awaiting Chartered Accountant Review (High Risk)",
+                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            Container(
-              height: 300,
-              width: double.infinity,
-              color: Colors.grey.shade50,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                   Icon(
+              Container(
+                height: 200,
+                width: double.infinity,
+                color: Colors.grey.shade50,
+                child: Center(
+                  child: Icon(
                     type == "INVOICE" ? Icons.receipt_long : Icons.warning_amber_rounded,
                     size: 80, 
                     color: Colors.blueGrey.shade200
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Preview of $title",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Text(
-                      "This is a placeholder for the actual document file.\nIn a real app, the PDF or Image would be rendered here.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-               padding: const EdgeInsets.all(16),
-               child: ElevatedButton.icon(
-                 onPressed: () {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Downloading...")));
-                 },
-                 icon: const Icon(Icons.download),
-                 label: const Text("Download Document"),
-                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-               ),
-            )
-          ],
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (ragGuidance != null) ...[
+                      const Text("🏛️ LEGAL GUIDANCE (RAG)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      const SizedBox(height: 4),
+                      Text(ragGuidance, style: const TextStyle(fontSize: 13)),
+                      const Divider(height: 24),
+                    ],
+                    if (validation != null) ...[
+                      const Text("⚙️ HYBRID LOGIC VALIDATION", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                      const SizedBox(height: 4),
+                      if (validation['errors'].isNotEmpty)
+                         ...validation['errors'].map((e) => Text("❌ $e", style: const TextStyle(color: Colors.red, fontSize: 12))).toList(),
+                      if (validation['warnings'].isNotEmpty)
+                         ...validation['warnings'].map((w) => Text("⚠️ $w", style: const TextStyle(color: Colors.orange, fontSize: 12))).toList(),
+                      if (validation['warnings'].isEmpty && validation['errors'].isEmpty)
+                         const Text("✅ Mathematical and format checks passed.", style: TextStyle(color: Colors.green, fontSize: 12)),
+                      const Divider(height: 24),
+                    ],
+                    Text(
+                      "Full extraction data is stored for your records. You can download the physical copy below.",
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                 padding: const EdgeInsets.all(16),
+                 child: Row(
+                   children: [
+                     Expanded(
+                       child: OutlinedButton.icon(
+                         onPressed: () => Navigator.pop(ctx),
+                         icon: const Icon(Icons.share),
+                         label: const Text("Share"),
+                       ),
+                     ),
+                     const SizedBox(width: 12),
+                     Expanded(
+                       child: ElevatedButton.icon(
+                         onPressed: () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Downloading...")));
+                         },
+                         icon: const Icon(Icons.download),
+                         label: const Text("Download"),
+                         style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                       ),
+                     ),
+                   ],
+                 ),
+              )
+            ],
+          ),
         ),
       ),
     );

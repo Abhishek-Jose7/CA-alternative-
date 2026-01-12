@@ -8,6 +8,11 @@ from groq import Groq
 from pathlib import Path
 from dotenv import load_dotenv
 
+from datetime import datetime
+from .rag_service import rag_service
+from .validation_service import validation_service
+from .firebase_service import firebase_service
+
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
@@ -24,6 +29,9 @@ class AIService:
         # Simple In-Memory History (For Hackathon)
         # Format: {user_id: [{"role": "user", "content": "msg"}, ...]}
         self.history = {}
+        
+        # CA Verification Queue
+        self.ca_queue = []
 
     async def _perform_ocr(self, image_path: str) -> str:
         """Extracts text from image using OCR.space API."""
@@ -76,7 +84,7 @@ class AIService:
         text = text.replace("```json", "").replace("```", "").strip()
         return json.loads(text)
 
-    async def decode_notice(self, image_path: str, language: str = 'en') -> dict:
+    async def decode_notice(self, image_path: str, language: str = 'en', user_id: str = None) -> dict:
         ocr_text = await self._perform_ocr(image_path)
         
         print(f"DEBUG: OCR Text Sample: {ocr_text[:500]}...")
@@ -132,9 +140,44 @@ class AIService:
 
         response_text = chat_completion.choices[0].message.content
         print(f"DEBUG: LLM Raw Response: {response_text}")
-        return self._clean_json(response_text)
+        result = self._clean_json(response_text)
 
-    async def parse_invoice(self, image_path: str) -> dict:
+        # --- HYBRID LOGIC: RAG Integration ---
+        # Search for similar historical notices/circulars
+        rag_results = await rag_service.query_knowledge_base(ocr_text)
+        if rag_results:
+            result["rag_context"] = rag_results[0]["doc"]
+            result["guidance"] = rag_results[0]["doc"]["guidance"]
+
+        # --- HYBRID LOGIC: Validation ---
+        validation = validation_service.validate_invoice_math(result) # Reuse math structure or add notice specific
+        result["validation"] = validation
+        
+        # --- HUMAN-IN-THE-LOOP: CA Queue ---
+        needs_review = validation_service.check_hitl_criteria(result, "notice")
+        result["needs_ca_review"] = needs_review
+        
+        if needs_review:
+            self.ca_queue.append({
+                "id": str(Path(image_path).name),
+                "type": "notice",
+                "data": result,
+                "status": "pending_review"
+            })
+
+        # Save to Firebase if user_id provided
+        if user_id:
+            firebase_service.save_document(user_id, 'history', {
+                'type': 'notice',
+                'title': result.get('notice_type', 'GST Notice'),
+                'date': result.get('deadline', ''),
+                'timestamp': Path(image_path).stat().st_mtime, # or string iso
+                'data': result
+            })
+
+        return result
+
+    async def parse_invoice(self, image_path: str, user_id: str = None) -> dict:
         ocr_text = await self._perform_ocr(image_path)
         
         prompt = f"""
@@ -222,7 +265,44 @@ class AIService:
         )
 
         response_text = chat_completion.choices[0].message.content
-        return self._clean_json(response_text)
+        result = self._clean_json(response_text)
+
+        # --- HYBRID LOGIC: Rule-based Validation ---
+        # 1. Validate GSTIN
+        vendor_gstin = result.get("vendor", {}).get("gstin", "")
+        result["vendor"]["is_gstin_valid"] = validation_service.validate_gstin(vendor_gstin)
+        
+        # 2. Validate Math
+        validation = validation_service.validate_invoice_math(result)
+        result["validation"] = validation
+
+        # 3. Kaccha Bill Detection (Rule + AI)
+        if not result["vendor"]["is_gstin_valid"]:
+            result["invoiceDetails"]["isKacchaBill"] = True
+            result["validation"]["warnings"].append("Flagged as Kaccha Bill due to missing/invalid GSTIN.")
+
+        # --- HUMAN-IN-THE-LOOP: CA Queue ---
+        needs_review = validation_service.check_hitl_criteria(result, "invoice")
+        result["needs_ca_review"] = needs_review
+        
+        if needs_review:
+            self.ca_queue.append({
+                "id": str(Path(image_path).name),
+                "type": "invoice",
+                "data": result,
+                "status": "pending_review"
+            })
+
+        # Save to Firebase if user_id provided
+        if user_id:
+            firebase_service.save_document(user_id, 'history', {
+                'type': 'invoice',
+                'title': result.get('vendor', {}).get('name', 'Invoice'),
+                'date': result.get('invoiceDetails', {}).get('invoiceDate', ''),
+                'data': result
+            })
+
+        return result
 
     async def search_hsn(self, query: str) -> dict:
         prompt = f"""
@@ -249,8 +329,11 @@ class AIService:
         return json.loads(response_text)
 
     async def chat_with_ca(self, message: str, language: str = "en", user_id: str = None) -> dict:
-        lang_instruction = "Speak in **Formal Hinglish** (Professional mix of Hindi and English). Use respectful terms like 'Aap', 'Kripya'."
-        if language == 'hi':
+        # 1. Stricter Language Enforcement
+        if language == 'en':
+            # Being very explicit because the model often defaults to Hinglish for Indian contexts
+            lang_instruction = "IMPORTANT: You MUST respond ONLY in Pure Formal English. DO NOT use any Hindi, Hinglish, or Indian slang keywords. Maintain a top-tier British/American standard business English profile."
+        elif language == 'hi':
             lang_instruction = "Speak in **Formal Hindi** (Shuddh Hindi / Devanagari script). Use respectful address like 'Namaste', 'Mahoday', 'Aap'."
         elif language == 'mr':
             lang_instruction = "Speak in **Formal Marathi** (Devanagari script). Use professional terms and respectful address like 'Aapan'."
@@ -258,6 +341,8 @@ class AIService:
             lang_instruction = "Speak in **Formal Gujarati**. Use respectful and professional language."
         elif language == 'ta':
             lang_instruction = "Speak in **Formal Tamil**. Use respectful and professional language."
+        else:
+            lang_instruction = "Speak in **Formal Hinglish** (Professional mix of Hindi and English). Use respectful terms like 'Aap', 'Kripya'."
             
         system_prompt = f"""
         You are a highly professional and knowledgeable Indian Chartered Accountant (CA).
@@ -265,29 +350,34 @@ class AIService:
         
         Instructions:
         1. {lang_instruction}
-        2. Maintain a strict, professional, and formal tone at all times. Avoid slang or overly casual language.
+        2. Maintain a strict, professional, and formal tone at all times.
         3. Be authoritative, precise, and polite.
         4. Do not give illegal advice.
         5. Keep answers concise (under 3 sentences unless asked for detail).
         
-        Example (if Hinglish):
-        User: "Mera ITC block ho gaya."
-        You: "Kripya chinta na karein. Yeh sadharanatah tab hota hai jab aapke supplier ne apna return samay par file nahi kiya hota. Aap 2A/2B verify karein, main aapki sahayata karunga."
+        CRITICAL: If language is 'en', never say 'Aap', 'Ji', or use Hinglish.
         """
         
-        # Initialize history
+        # 2. History Handling with Firebase
         messages = [{"role": "system", "content": system_prompt}]
         
         if user_id:
+            # Load from Firestore (cached in-memory for this instance but synced)
             if user_id not in self.history:
-                self.history[user_id] = []
+                # Initial load from Firestore
+                try:
+                    db_history = firebase_service.db.collection('users').document(user_id).collection('chat_history').order_by('timestamp', direction='ASCENDING').limit(20).stream()
+                    self.history[user_id] = [{"role": doc.to_dict()['role'], "content": doc.to_dict()['content']} for doc in db_history]
+                except Exception as e:
+                    print(f"Error loading chat history: {e}")
+                    self.history[user_id] = []
             
-            # Append history (Last 10 messages for context)
-            messages.extend(self.history[user_id][-10:])
-            # Append current message
-            messages.append({"role": "user", "content": message})
-        else:
-            messages.append({"role": "user", "content": message})
+            # Use last 10 for context
+            context_messages = self.history[user_id][-10:]
+            messages.extend(context_messages)
+        
+        # Append current message
+        messages.append({"role": "user", "content": message})
 
         chat_completion = self.client.chat.completions.create(
             messages=messages,
@@ -297,11 +387,22 @@ class AIService:
         
         reply = chat_completion.choices[0].message.content
         
-        # Save to history
+        # 3. Save to History (Both local and Firestore)
         if user_id:
-            self.history[user_id].append({"role": "user", "content": message})
-            self.history[user_id].append({"role": "assistant", "content": reply})
+            user_msg = {"role": "user", "content": message}
+            assistant_msg = {"role": "assistant", "content": reply}
             
+            self.history[user_id].append(user_msg)
+            self.history[user_id].append(assistant_msg)
+            
+            # Async save to Firestore (or sync if needed, but here simple fire-and-forget logic for speed)
+            try:
+                chat_col = firebase_service.db.collection('users').document(user_id).collection('chat_history')
+                chat_col.add({**user_msg, "timestamp": datetime.utcnow()})
+                chat_col.add({**assistant_msg, "timestamp": datetime.utcnow()})
+            except Exception as e:
+                print(f"Error saving to Firestore: {e}")
+                
         return {"reply": reply}
 
     async def chat_with_vision(self, message: str, image_path: str) -> dict:

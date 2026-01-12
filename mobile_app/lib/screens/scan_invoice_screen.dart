@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import 'loading_screen.dart';
 import 'invoice_result_screen.dart';
+import '../services/history_service.dart';
+import 'package:provider/provider.dart';
 
 class ScanInvoiceScreen extends StatefulWidget {
   const ScanInvoiceScreen({super.key});
@@ -33,6 +35,15 @@ class _ScanInvoiceScreenState extends State<ScanInvoiceScreen> {
       final response = await _api.parseInvoice(image);
       
       if (!mounted) return;
+
+      // Save to history
+      final history = Provider.of<HistoryService>(context, listen: false);
+      history.addEntry({
+        'type': 'invoice',
+        'title': response['data']?['vendor']?['name'] ?? 'Invoice',
+        'date': DateTime.now().toIso8601String().split('T')[0],
+        'data': response['data']
+      });
       
       Navigator.pop(context);
       Navigator.pushReplacement(

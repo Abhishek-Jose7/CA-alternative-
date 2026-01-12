@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   // Replace with your actual Cloud Run URL or local IP (10.0.2.2 for Android emulator)
@@ -10,8 +11,11 @@ class ApiService {
   // Assuming standard localhost for now, user might need to handle CORS on backend if this fails differently.
   static const String baseUrl = "http://127.0.0.1:8000"; 
 
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+
   Future<Map<String, dynamic>> decodeNotice(XFile imageFile, {String language = 'en'}) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/notice/decode?language=$language'));
+    final uid = _uid;
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/notice/decode?language=$language&user_id=$uid'));
     
     // Read bytes for web compatibility
     final bytes = await imageFile.readAsBytes();
@@ -32,7 +36,8 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> parseInvoice(XFile imageFile) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/invoice/parse'));
+    final uid = _uid;
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/invoice/parse?user_id=$uid'));
     
     final bytes = await imageFile.readAsBytes();
     request.files.add(http.MultipartFile.fromBytes(
@@ -62,10 +67,11 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> chatWithAI(String message, {String language = 'en', String? userId}) async {
+    final uid = userId ?? _uid;
     final response = await http.post(
       Uri.parse('$baseUrl/api/chat'),
       headers: {"Content-Type": "application/json"},
-      body: json.encode({"message": message, "language": language, "user_id": userId}),
+      body: json.encode({"message": message, "language": language, "user_id": uid}),
     );
      if (response.statusCode == 200) {
        // Fix: Explicitly decode as UTF-8 to prevent weird characters (mojibake)
@@ -109,6 +115,12 @@ class ApiService {
       print("Error uploading image: ${response.body}"); // Debug log
       throw Exception('Failed to chat with image: ${response.statusCode}');
     }
+  }
+
+  Future<Map<String, dynamic>> getCAQueue() async {
+    final response = await http.get(Uri.parse('$baseUrl/ca/queue'));
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('Failed to fetch CA Queue');
   }
 }
 

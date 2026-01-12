@@ -10,7 +10,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/parse")
-async def parse_invoice(file: UploadFile = File(...)):
+async def parse_invoice(file: UploadFile = File(...), user_id: str = None):
     try:
         # Save temp file
         file_ext = file.filename.split(".")[-1]
@@ -21,7 +21,7 @@ async def parse_invoice(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
             
         # Call AI Service
-        result = await gemini_service.parse_invoice(file_path)
+        result = await gemini_service.parse_invoice(file_path, user_id=user_id)
         
         return {
             "status": "success",
